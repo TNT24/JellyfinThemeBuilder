@@ -1,0 +1,216 @@
+<div id="ThemeBuilderConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
+    <div data-role="content">
+        <div class="content-primary tbc">
+
+            <style>
+                .tbc { --tbc-accent: #00a4dc; max-width: 1100px; padding-bottom: 3em; }
+                .tbc * { box-sizing: border-box; }
+                .tbc-hero { position: relative; overflow: hidden; margin-top: 1.5em; padding: 2em 2.2em; border-radius: 14px;
+                    background: radial-gradient(ellipse at top left, color-mix(in srgb, var(--tbc-accent) 35%, transparent) 0%, transparent 60%), linear-gradient(135deg, #1d1d24 0%, #141418 100%);
+                    border: 1px solid rgba(255,255,255,0.07); }
+                .tbc-hero h1 { margin: 0 0 0.2em 0; font-size: 2.2em; font-weight: 600; display: flex; align-items: center; gap: 0.45em; }
+                .tbc-hero h1 svg { width: 1.1em; height: 1.1em; color: var(--tbc-accent); }
+                .tbc-version { font-size: 0.4em; font-weight: 500; padding: 0.3em 0.7em; border-radius: 999px; background: rgba(255,255,255,0.08); color: #bbb; }
+                .tbc-hero p { margin: 0.3em 0 0 0; color: #bbb; font-size: 1.1em; line-height: 1.5; max-width: 46em; }
+                .tbc-actions { display: flex; flex-wrap: wrap; gap: 0.7em; margin-top: 1.4em; }
+                .tbc-btn { display: inline-flex; align-items: center; gap: 0.5em; padding: 0.75em 1.3em; border-radius: 8px; border: none; cursor: pointer; font-size: 1em; font-weight: 600; text-decoration: none; }
+                .tbc-btn-primary { background: var(--tbc-accent); color: var(--tbc-accent-text, #fff); }
+                .tbc-btn-ghost { background: rgba(255,255,255,0.08); color: #eee; }
+                .tbc-btn:hover { filter: brightness(1.12); }
+                .tbc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1em; margin-top: 1.4em; }
+                .tbc-card { background: #1a1a1f; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.2em 1.3em; }
+                .tbc-card h3 { margin: 0 0 0.7em 0; font-size: 1.05em; font-weight: 600; color: #eee; display: flex; align-items: center; gap: 0.5em; }
+                .tbc-card p, .tbc-card li { color: #aaa; line-height: 1.55; }
+                .tbc-card ul, .tbc-card ol { margin: 0; padding-left: 1.2em; }
+                .tbc-card li { margin: 0.25em 0; }
+                .tbc-card b { color: #ddd; }
+                .tbc-section-title { margin: 2em 0 0.2em 0; font-size: 1.3em; font-weight: 600; }
+                .tbc-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.8em; margin-top: 1em; }
+                .tbc-check { display: flex; gap: 0.8em; align-items: flex-start; background: #1a1a1f; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.9em 1em; }
+                .tbc-dot { flex-shrink: 0; width: 1.6em; height: 1.6em; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85em; background: #333; color: #aaa; }
+                .tbc-ok .tbc-dot { background: rgba(80,200,120,0.18); color: #6fdc8c; }
+                .tbc-bad .tbc-dot { background: rgba(255,110,110,0.18); color: #ff8a80; }
+                .tbc-check b { display: block; color: #eee; font-weight: 600; }
+                .tbc-check span.tbc-detail { color: #999; font-size: 0.9em; }
+                .tbc-swatches { display: flex; gap: 0.5em; flex-wrap: wrap; margin-top: 0.4em; }
+                .tbc-swatch { display: flex; align-items: center; gap: 0.45em; padding: 0.35em 0.7em 0.35em 0.35em; border-radius: 999px; background: rgba(255,255,255,0.05); color: #ccc; font-size: 0.9em; }
+                .tbc-swatch i { width: 1.3em; height: 1.3em; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); display: inline-block; }
+                .tbc-kv { display: grid; grid-template-columns: auto 1fr; gap: 0.35em 1em; color: #aaa; margin-top: 0.6em; }
+                .tbc-kv dt { color: #888; } .tbc-kv dd { margin: 0; color: #ddd; }
+                .tbc-muted { color: #888; font-size: 0.9em; }
+                .tbc code { background: rgba(255,255,255,0.07); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.9em; }
+                .tbc details { background: #1a1a1f; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.8em 1.1em; margin-top: 0.7em; }
+                .tbc summary { cursor: pointer; color: #ddd; font-weight: 600; }
+                .tbc details p, .tbc details li { color: #aaa; line-height: 1.55; }
+            </style>
+
+            <!-- Hero -->
+            <div class="tbc-hero">
+                <h1>
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37-1.34-1.34a.996.996 0 0 0-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 0 0 0-1.41z"/></svg>
+                    Theme Builder <span class="tbc-version" id="tbcVersion">…</span>
+                </h1>
+                <p>Restyle Jellyfin without writing CSS. Change colours, cards, the top bar, details pages, the player and much more with a live preview, then save it for every user, including the TV apps.</p>
+                <div class="tbc-actions">
+                    <button type="button" class="tbc-btn tbc-btn-primary" id="tbcOpenEditor">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        Open Theme Editor
+                    </button>
+                    <button type="button" class="tbc-btn tbc-btn-ghost" id="tbcRecheck">Run checks again</button>
+                </div>
+            </div>
+
+            <!-- Live status -->
+            <div class="tbc-section-title">Status</div>
+            <div class="tbc-muted">Checked live when this page opens.</div>
+            <div class="tbc-status" id="tbcStatus"></div>
+
+            <!-- Current theme -->
+            <div class="tbc-grid">
+                <div class="tbc-card">
+                    <h3>Current theme</h3>
+                    <div class="tbc-swatches" id="tbcSwatches"><span class="tbc-muted">Loading…</span></div>
+                    <dl class="tbc-kv" id="tbcSummary"></dl>
+                </div>
+                <div class="tbc-card">
+                    <h3>How to use it</h3>
+                    <ol>
+                        <li>Open the <b>user menu</b> (your profile picture, top right) and choose <b>Theme Editor</b>, or use the button above.</li>
+                        <li>Change options on the right. The preview and the page behind update <b>live</b>.</li>
+                        <li>Try a <b>Preset</b>, search options, or click <b>Changed only</b> to review your edits.</li>
+                        <li>Click <b>Save &amp; Reload</b>. The theme applies to everyone.</li>
+                    </ol>
+                </div>
+                <div class="tbc-card">
+                    <h3>Safety net</h3>
+                    <ul>
+                        <li><b>Close without saving</b> discards everything (you'll be asked first).</li>
+                        <li><b>Undo / Redo</b> (Ctrl+Z / Ctrl+Y) while editing.</li>
+                        <li><b>Previous save</b> brings back the theme from before your last save.</li>
+                        <li><b>Export</b> gives you a code to back up or share; <b>Import</b> restores it.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="tbc-section-title">What you can change</div>
+            <div class="tbc-grid">
+                <div class="tbc-card"><h3>Colours &amp; background</h3><p>Accent, page and menu colours, true OLED black, an accent that <b>matches each title's artwork</b>, a background image or soft accent glow, and frosted-glass menus.</p></div>
+                <div class="tbc-card"><h3>Top bar</h3><p>Colour, opacity and blur, your own logo, transparent until you scroll, and hiding the search, cast or SyncPlay icons.</p></div>
+                <div class="tbc-card"><h3>Cards &amp; posters</h3><p>Corner radius (separately for wide tiles), spacing, hover zoom or glow, borders, shadows, dimmed watched items, badge and progress-bar colours, title styling.</p></div>
+                <div class="tbc-card"><h3>Details pages</h3><p>Banner darkness and blur, title size, accent or solid Play buttons, and hiding any button, line or section (cast, similar, extras…).</p></div>
+                <div class="tbc-card"><h3>Home, lists &amp; player</h3><p>Home row titles and spacing, the My Media row, episode descriptions and thumbnail size, player accent colours and subtitle style and size.</p></div>
+                <div class="tbc-card"><h3>Login, night mode &amp; users</h3><p>Login background, blur, logo and welcome text; automatic dimming at night; and optional <b>personal themes</b> each user can pick from their menu (<b>My Theme</b>).</p></div>
+            </div>
+
+            <!-- Details -->
+            <div class="tbc-section-title">Good to know</div>
+            <details>
+                <summary>How the theme reaches every device</summary>
+                <p>In browsers, the plugin adds the theme and the editor to the web client through the <b>File Transformation</b> plugin (required). Saving also writes the theme into a marked block at the top of <b>Dashboard &gt; General &gt; Custom CSS</b>, because the TV apps (Samsung Tizen, LG webOS) carry their own copy of the web client and only receive Custom CSS. Anything else you keep in Custom CSS is left untouched.</p>
+                <p>After a plugin update, the saved theme and the Custom CSS copy are rebuilt automatically the first time an administrator opens the web client, so new fixes reach the TV apps too.</p>
+            </details>
+            <details>
+                <summary>TV and mobile apps</summary>
+                <ul>
+                    <li>TV apps show the theme (from Custom CSS) but not the editor, the personal themes, night mode or the per-title accent, which need the browser script.</li>
+                    <li>On TVs there is no mouse: the hover glow appears as a ring on the focused card instead.</li>
+                    <li>The Android/iOS apps use the web client, so the theme applies there as in a browser.</li>
+                    <li>A few options use the <code>:has()</code> CSS feature (Chrome 105+). Older TV browsers simply skip those.</li>
+                </ul>
+            </details>
+            <details>
+                <summary>Troubleshooting</summary>
+                <ul>
+                    <li><b>No "Theme Editor" in the menu:</b> it's for administrators only. Check the status above: "Theme added to the web client" must be green. If not, make sure File Transformation is installed and enabled, then restart Jellyfin.</li>
+                    <li><b>Changes don't show:</b> clear the browser's site data for Jellyfin (F12 &gt; Application &gt; Clear site data) and reload.</li>
+                    <li><b>A page looks blank or broken:</b> open the Theme Editor and click <b>Diagnostics</b>. It checks the page scripts aren't damaged and that everything is up to date.</li>
+                    <li><b>TV looks different to the browser:</b> open the editor and click <b>Save &amp; Reload</b> to refresh the Custom CSS copy.</li>
+                    <li><b>Start over:</b> in the editor click <b>Reset</b>, then <b>Save &amp; Reload</b>.</li>
+                </ul>
+            </details>
+
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (function () {
+            var page = document.getElementById('ThemeBuilderConfigPage');
+            var START = '/* ThemeBuilder:start';
+
+            function contrast(hex) {
+                var m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+                if (!m) return '#fff';
+                var n = parseInt(m[1], 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+                var l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+                return (l + 0.05) / 0.05 > 1.05 / (l + 0.05) ? '#000' : '#fff';
+            }
+
+            function check(ok, title, detail) {
+                return '<div class="tbc-check ' + (ok === null ? '' : ok ? 'tbc-ok' : 'tbc-bad') + '"><span class="tbc-dot">' + (ok === null ? '…' : ok ? '&#10003;' : '!') + '</span><div><b>' + title + '</b><span class="tbc-detail">' + detail + '</span></div></div>';
+            }
+
+            function load() {
+                var status = page.querySelector('#tbcStatus');
+                status.innerHTML = check(null, 'Checking…', '');
+                var get = function (path) { return fetch(ApiClient.getUrl(path), { cache: 'no-store' }); };
+
+                Promise.all([
+                    get('ThemeBuilder/settings').then(function (r) { return r.json(); }).catch(function () { return null; }),
+                    get('web/index.html').then(function (r) { return r.text(); }).catch(function () { return ''; }),
+                    get('ThemeBuilder/style.css').then(function (r) { return r.text(); }).catch(function () { return ''; }),
+                    ApiClient.getNamedConfiguration('branding').catch(function () { return null; })
+                ]).then(function (res) {
+                    var info = res[0], html = res[1], css = res[2], branding = res[3];
+                    var s = (info && info.settings) || {};
+                    var version = info ? info.version : '?';
+                    page.querySelector('#tbcVersion').textContent = 'v' + version;
+
+                    var accent = s.AccentColor || '#00a4dc';
+                    page.querySelector('.tbc').style.setProperty('--tbc-accent', accent);
+                    page.querySelector('.tbc').style.setProperty('--tbc-accent-text', contrast(accent));
+
+                    var injected = html.indexOf('ThemeBuilder/editor.js') !== -1;
+                    var saved = css.trim().length > 0;
+                    var upToDate = info && info.cssVersion === info.version;
+                    var custom = (branding && branding.CustomCss) || '';
+                    var tvCopy = custom.indexOf(START) !== -1;
+                    status.innerHTML =
+                        check(injected, 'Theme added to the web client', injected ? 'File Transformation is adding the theme and editor to every page.' : 'Not found in index.html. Install/enable File Transformation and restart Jellyfin.') +
+                        check(saved, 'Theme saved', saved ? Math.round(css.length / 1024) + ' KB of theme styles.' : 'Nothing saved yet. Open the editor and click Save & Reload.') +
+                        check(!saved || upToDate, 'Built by this version', upToDate ? 'The saved theme matches v' + version + '.' : saved ? 'Built by ' + (info.cssVersion || 'an older version') + '. It rebuilds the next time an admin opens the web client.' : 'Not saved yet.') +
+                        check(tvCopy, 'TV apps covered', tvCopy ? 'A copy is in Dashboard > General > Custom CSS.' : 'No copy in Custom CSS yet. Save the theme once.');
+
+                    // Summary of the current theme.
+                    var bg = s.EnableOledBlack ? '#000000' : (s.BackgroundColor || '#101010');
+                    var sw = function (c, label) { return '<span class="tbc-swatch"><i style="background:' + c + '"></i>' + label + '</span>'; };
+                    page.querySelector('#tbcSwatches').innerHTML = info && info.settings && Object.keys(info.settings).length
+                        ? sw(accent, 'Accent ' + accent) + sw(bg, s.EnableOledBlack ? 'OLED black' : 'Background ' + bg) + sw(s.SurfaceColor || '#202020', 'Menus')
+                        : '<span class="tbc-muted">Jellyfin\'s default look (nothing saved yet).</span>';
+                    var on = function (k) { return s[k] === true || s[k] === 'true'; };
+                    var features = [];
+                    if (on('AutoAccentFromBackdrop')) features.push('accent from artwork');
+                    if (on('HeaderTransparentTop')) features.push('transparent top bar');
+                    if (on('EnableHoverGlow')) features.push('hover glow');
+                    if (on('GlassMenus')) features.push('glass menus');
+                    if (on('NightMode')) features.push('night mode ' + s.NightStart + ':00–' + s.NightEnd + ':00');
+                    var hidden = Object.keys(s).filter(function (k) { return /^Hide/.test(k) && on(k); }).length;
+                    page.querySelector('#tbcSummary').innerHTML =
+                        '<dt>Corners</dt><dd>' + (s.BorderRadius || '0.2') + ' em</dd>' +
+                        '<dt>Hidden items</dt><dd>' + hidden + '</dd>' +
+                        '<dt>Personal themes</dt><dd>' + (on('AllowUserThemes') ? 'Allowed (users see "My Theme")' : 'Off') + '</dd>' +
+                        '<dt>Extras</dt><dd>' + (features.length ? features.join(', ') : 'None') + '</dd>';
+                });
+            }
+
+            page.querySelector('#tbcOpenEditor').addEventListener('click', function () {
+                if (window.ThemeBuilder && window.ThemeBuilder.openEditor) window.ThemeBuilder.openEditor();
+                else Dashboard.alert('The editor script isn\'t loaded on this page. Check the status above, then refresh.');
+            });
+            page.querySelector('#tbcRecheck').addEventListener('click', load);
+            page.addEventListener('pageshow', load);
+            // In case the page was already shown before this script ran.
+            if (page.offsetParent !== null) load();
+        })();
+    </script>
+</div>

@@ -1,0 +1,433 @@
+<!doctype html>
+<!-- Automated checks for Web/editor.js. Run with tests/run-tests.ps1 (headless Chrome), or open in Chrome
+     directly (needs --allow-file-access-from-files for nothing; it only loads ../Web/editor.js). -->
+<html><head><meta charset="utf-8"><title>Theme Builder tests</title></head>
+<body style="background:#111;color:#ddd;font-family:monospace">
+<pre id="out"></pre>
+<script>
+    const out = document.getElementById('out');
+    let passed = 0, failed = 0;
+    const log = (m) => { out.textContent += m + '\n'; };
+    const check = (name, ok, detail) => {
+        if (ok) passed++; else failed++;
+        log((ok ? 'PASS ' : 'FAIL ') + name + (detail !== undefined && !ok ? '  -> ' + detail : ''));
+    };
+    window.onerror = (m, s, l, c) => { failed++; log('FAIL uncaught error: ' + m + ' @' + l + ':' + c); };
+
+    // Minimal stand-ins for the Jellyfin web client globals editor.js uses.
+    window.__TB_TEST__ = true;
+    const savedSettings = { AccentColor: '#e50914', EnableOledBlack: true, HideAlphaPicker: true };
+    window.ApiClient = {
+        getCurrentUserId: () => 'u1',
+        getCurrentUser: () => Promise.resolve({ Policy: { IsAdministrator: true } }),
+        getUrl: (p) => p,
+        getPluginConfiguration: () => Promise.resolve({ SettingsJson: JSON.stringify(savedSettings), PreviousSettingsJson: JSON.stringify({ AccentColor: '#123456' }), CssVersion: 'old', GeneratedCss: '' }),
+        updatePluginConfiguration: () => Promise.resolve(),
+        getNamedConfiguration: () => Promise.resolve({ CustomCss: '' }),
+        updateNamedConfiguration: () => Promise.resolve()
+    };
+    window.Dashboard = { showLoadingMsg() {}, hideLoadingMsg() {}, alert() {} };
+</script>
+<script src="../Web/editor.js"></script>
+<script>
+(async function () {
+    const T = window.__ThemeBuilderTest;
+    check('editor.js loads and exposes test hooks', !!T);
+    if (!T) { log('RESULT: ' + passed + ' passed, ' + failed + ' failed'); return; }
+    const $ = (id) => document.getElementById(id);
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const fire = (el, type) => el.dispatchEvent(new Event(type || 'input'));
+
+    // ---- CSS generation ----
+    const parse = (css) => { const st = new CSSStyleSheet(); st.replaceSync(css.replace(/@import[^;]*;/g, '')); return [...st.cssRules].map(r => r.cssText).join('\n'); };
+    const defaults = T.defaultValues();
+    check('field ids are unique', new Set(T.fields.filter(f => f.id).map(f => f.id)).size === T.fields.filter(f => f.id).length);
+    check('every field has a default', T.fields.filter(f => f.id).every(f => f.default !== undefined));
+    let css = T.buildCss(defaults);
+    check('default theme builds', css.length > 1000, css.length);
+    check('default theme never paints .backgroundContainer solid (black detail pages)', !/\.backgroundContainer(?!\.withBackdrop)[^{]*\{[^}]*background(-color)?:(?!\s*transparent)/.test(css.replace(/\/\*[\s\S]*?\*\//g, '')));
+
+    // Older clients (TV apps) paint .backgroundContainer #101010 over <html>; it must turn see-through, backdrop dimming kept.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = '.backgroundContainer { background-color: #101010; } .backgroundContainer.withBackdrop { background-color: rgba(0, 0, 0, 0.86); }\n' + T.buildCss(T.defaultValues());
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="backgroundContainer"></div><div class="backgroundContainer withBackdrop"></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [plainBg, withBd] = [...host.children].map(d => getComputedStyle(d).backgroundColor);
+        check('TV: page background is not hidden by the old #101010 layer', plainBg === 'rgba(0, 0, 0, 0)', plainBg);
+        check('backdrop dimming layer untouched', withBd === 'rgba(0, 0, 0, 0.86)', withBd);
+        st.remove(); host.remove();
+    })();
+
+    // Text Size scales each layout's own base size instead of forcing the desktop one onto TV and phones.
+    (() => {
+        const c = T.buildCss(Object.assign(T.defaultValues(), { TextScale: '120' }));
+        check('Text Size keeps TV at 125% (x scale)', c.indexOf('html.layout-tv { font-size: 150.00% !important; }') !== -1 && c.indexOf('html { font-size: 111.60% !important; }') !== -1);
+        check('Text Size keeps phones at 90% (x scale)', c.indexOf('html.layout-mobile { font-size: 108.00% !important; }') !== -1);
+        check('Text Size 100% leaves every layout alone', !/html(\.layout-\w+)? \{ font-size/.test(T.buildCss(T.defaultValues())));
+    })();
+
+    // TV grids: breakpoints scaled for TV's larger text, so grid posters match row posters.
+    (() => {
+        const c = T.buildCss(Object.assign(T.defaultValues(), { PosterSize: 'large' }));
+        const first = (14 * 3 * 1.25 / 0.93).toFixed(2);
+        check('TV grid breakpoints use TV text size', c.indexOf(`@media (min-width: ${first}em) { .layout-tv .vertical-wrap > .portraitCard`) !== -1, first);
+        check('desktop grid breakpoints unchanged', c.indexOf('@media (min-width: 42em) { .vertical-wrap > .portraitCard') !== -1);
+    })();
+
+    // TV focus frame: card shadow stays on the image; detail buttons keep a solid focus.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = '.card.show-focus:not(.show-animation) .cardBox:not(.visualCardBox) .cardScalable { border: 0.5em solid transparent; }\n'
+            + T.buildCss(Object.assign(T.defaultValues(), { EnableCardShadow: true, AccentColor: '#e50914' }));
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        host.innerHTML = '<div class="card show-focus"><div class="cardBox"><div class="cardScalable"></div></div></div><div class="card"><div class="cardBox"><div class="cardScalable"></div></div></div>'
+            + '<div class="itemDetailPage"><div class="mainDetailButtons"><button class="detailButton emby-button show-focus"><span class="material-icons"></span></button><button class="detailButton emby-button"><span class="material-icons"></span></button></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [tvS, deskS] = [...host.querySelectorAll('.cardScalable')].map(e => getComputedStyle(e).boxShadow);
+        check('TV card shadow hugs the image (spread -0.5em)', /-5px/.test(tvS) && !/-5px/.test(deskS), tvS + ' | ' + deskS);
+        const [tvBtn, deskBtn] = host.querySelectorAll('.detailButton');
+        tvBtn.focus();
+        const f = getComputedStyle(tvBtn).backgroundColor, fi = getComputedStyle(tvBtn.querySelector('.material-icons')).color;
+        check('TV focused detail button is solid accent with readable icon', f === 'rgb(229, 9, 20)' && fi === 'rgb(255, 255, 255)', f + ' / ' + fi);
+        deskBtn.focus();
+        check('desktop focused detail button keeps the light tint', getComputedStyle(deskBtn).backgroundColor === 'rgba(229, 9, 20, 0.18)', getComputedStyle(deskBtn).backgroundColor);
+        st.remove(); host.remove();
+    })();
+
+    Object.keys(T.PRESETS).forEach(name => {
+        let ok = true, err;
+        try { parse(T.buildCss(Object.assign(T.defaultValues(), T.PRESETS[name]))); } catch (e) { ok = false; err = e.message; }
+        check('preset builds: ' + name, ok, err);
+    });
+    const grouped = [].concat(...T.PRESET_GROUPS.map(g => g[1]));
+    check('every preset is in exactly one dropdown group', grouped.length === Object.keys(T.PRESETS).length && Object.keys(T.PRESETS).every(k => grouped.filter(n => n === k).length === 1), grouped.join(', '));
+
+    // Everything switched on / off its default: every rule the browser keeps is listed below.
+    const all = T.defaultValues();
+    T.fields.filter(f => f.id).forEach(f => {
+        if (f.type === 'checkbox') all[f.id] = true;
+        else if (f.type === 'range') all[f.id] = f.max;
+        else if (f.type === 'select') all[f.id] = f.options[f.options.length - 1][0];
+        else if (f.type === 'text') all[f.id] = f.id.indexOf('Url') !== -1 ? 'https://example.com/a.jpg' : 'Welcome "home"';
+    });
+    all.LinkWatchedToAccent = false; all.AutoBadgeText = false;
+    const kept = parse(T.buildCss(all));
+    [
+        ['A–Z picker (new layout)', '.alphaPicker-fixed-right'], ['Play All (MUI)', 'PlayArrowIcon'], ['watched dimming', ':has(.playedIndicator)'],
+        ['subtitles (native)', 'video::cue'], ['header icons', 'GroupsIcon'], ['transparent header', 'tb-scrolled'],
+        ['card border', 'cardScalable::before'], ['wide tiles', 'backdropCard'], ['skip button', '.skip-button'],
+        ['audio languages', 'mediaInfoItem-audioLanguage'], ['age rating', 'mediaInfoOfficialRating'], ['spinner', 'mdl-spinner__layer'],
+        ['glass menus', 'backdrop-filter: blur(16px)'], ['app background', 'example.com/a.jpg'], ['episode overview', 'listItem-overview'],
+        ['episode thumbs', 'listItemImage-large'], ['login logo', 'padded-bottom-page::before'], ['login welcome text', 'Welcome \\"home\\"'],
+        ['forgot password', 'btnForgotPassword'], ['login blur', 'blur(20px)'], ['night dim', 'tb-night::after'], ['card titles two lines', '-webkit-line-clamp: 2'],
+        ['profile icon', 'MuiAvatar-colorDefault'], ['my media titles', 'data-type="UserView"'],         ['home row title size', 'homeSectionsContainer'], ['details poster no hover', 'detailImageContainer'], ['detail sections', '#castCollapsible'], ['TV focus ring colour', '.card:focus .cardBox:not(.visualCardBox) .cardScalable'], ['TV focused button', '.emby-button.show-focus:focus'], ['plain background on TV', 'html.layout-tv'], ['main colour variable', '--jf-palette-primary-main'], ['TV guide focus', '.programCell:focus'], ['playing-now bar', '.appfooter'], ['pop-up messages', '.toast'], ['poster size (grid)', '.vertical-wrap > .portraitCard'], ['poster size (rows)', '.overflowPortraitCard'], ['titles on hover', '.card:focus-within .cardFooter'], ['badge position', '.cardIndicators'], ['progress position', '.innerCardFooterClear'], ['row title alignment', '.homeSectionsContainer .sectionTitle-cards'], ['detail alignment', '.itemDetailPage .mainDetailButtons'], ['hidden poster gap', '.detailPagePrimaryContent'], ['centred top bar', '.MuiToolbar-root > .MuiStack-root'], ['background gradient', 'right bottom']
+    ].forEach(([name, needle]) => check('rule kept by the browser: ' + name, kept.indexOf(needle) !== -1, needle));
+
+    // Older TVs (2020–2022 Tizen/webOS, Chrome 69–85) have no :has(), :is() or inset. They drop any rule
+    // using those, so drop them here too and check the TV-relevant rules survive.
+    const allCss = T.buildCss(all);
+    check('generated CSS avoids the inset shorthand (Chrome 87+)', !/[{;\s]inset\s*:/.test(allCss));
+    const oldTv = (() => { const st = new CSSStyleSheet(); st.replaceSync(allCss.replace(/@import[^;]*;/g, ''));
+        return [...st.cssRules].filter(r => !(r.selectorText && /:has\(|:is\(/.test(r.selectorText))).map(r => r.cssText).join('\n'); })();
+    [
+        ['TV focus ring', '.layout-tv .card:focus .cardScalable::after'], ['TV focus colour', '.card:focus .cardBox:not(.visualCardBox) .cardScalable'],
+        ['Play All (classic)', '.btnPlayAll'], ['Shuffle (classic)', '.btnShuffle'], ['header search', '.headerSearchButton'],
+        ['header cast', '.headerCastButton'], ['header SyncPlay', '.headerSyncButton'], ['player buttons', '.osdControls .btnPause'],
+        ['home row title size', '.homeSectionsContainer .sectionTitleContainer'], ['my media titles', 'data-type="UserView"'],
+        ['wide tiles', '.backdropCard .cardScalable'], ['profile icon (MUI)', 'MuiAvatar-colorDefault'], ['poster size', '.vertical-wrap > .portraitCard'], ['card title overlay', '.cardFooter'], ['centred TV header', '.skinHeader .headerLeft .pageTitle'], ['hidden poster gap', '.detailPagePrimaryContent'], ['toggle switches', 'mdl-switch__thumb'],
+        ['see-through background layer', '.backgroundContainer:not(.withBackdrop)'], ['TV text size', 'html.layout-tv'], ['TV grid sizes', '.layout-tv .vertical-wrap > .portraitCard'],
+        ['TV card shadow', '-0.5em'], ['TV detail button focus', '.show-focus:focus .material-icons'], ['TV floating button focus', '.layout-tv .emby-button.detailFloatingButton:focus'],
+        ['multi-select bar', '.selectionCommandsPanel'], ['dialog headers', '.formDialogHeader'], ['no TV header blur', '.layout-tv .skinHeader'], ['centred TV tab strip', '.headerTabs { margin-left: auto']
+    ].forEach(([name, needle]) => check('old TV browser keeps: ' + name, oldTv.indexOf(needle) !== -1, needle));
+
+    // Positioning options applied to real card / detail markup.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { PosterSize: 'large', CardTitlePosition: 'overlay', BadgePosition: 'topLeft', DetailPosterSide: 'right' }));
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="overflowPortraitCard card" style="font-size:10px"><div class="cardBox"><div class="cardScalable"><div class="cardIndicators"></div></div><div class="cardFooter"><div class="cardText">T</div></div></div></div>'
+            + '<div class="itemDetailPage"><div class="detailPagePrimaryContent"></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        document.documentElement.classList.add('layout-desktop');
+        const card = host.querySelector('.card');
+        check('poster size sets the row card width', getComputedStyle(card).width === '140px', getComputedStyle(card).width);
+        check('card titles can sit on the poster', getComputedStyle(card.querySelector('.cardFooter')).position === 'absolute');
+        check('watched badge can move to the top left', getComputedStyle(card.querySelector('.cardIndicators')).right === 'auto');
+        const pad = getComputedStyle(host.querySelector('.detailPagePrimaryContent'));
+        check('poster on the right moves the text space to the left', parseFloat(pad.paddingRight) > parseFloat(pad.paddingLeft), pad.paddingLeft + ' / ' + pad.paddingRight);
+        document.documentElement.classList.remove('layout-desktop');
+        st.remove(); host.remove();
+    })();
+
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { PosterSize: 'small', CardTitlePosition: 'overlayHover' }));
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        host.innerHTML = '<div class="availableImagesList vertical-wrap" style="display:flex;width:2000px"><div class="card imageEditorCard portraitCard"><div class="cardBox"><div class="cardFooter">TMDb</div></div></div><div class="card imageEditorCard backdropCard"></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [p, b] = host.querySelectorAll('.card');
+        check('image search pictures are large (even with small posters)', getComputedStyle(p).width === '200px' && getComputedStyle(b).width === '340px', getComputedStyle(p).width + ' / ' + getComputedStyle(b).width);
+        check('image search info and download button stay below the picture', getComputedStyle(p.querySelector('.cardFooter')).position !== 'absolute' && getComputedStyle(p.querySelector('.cardFooter')).opacity === '1');
+        st.remove(); host.remove();
+    })();
+
+    // Cast cards: the hover ring follows the photo's shape (square by default, round in round-cast themes).
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { BorderRadius: '0.4', EnableHoverGlow: true }))
+            + '\n.roundTheme .personCard .cardScalable { border-radius: 50% !important; }';
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        const person = '<div class="card personCard"><div class="cardBox"><div class="cardScalable" style="width:100px;height:100px"></div></div></div>';
+        host.innerHTML = '<div class="sq">' + person + '</div><div class="roundTheme">' + person + '</div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [sq, round] = [...host.querySelectorAll('.cardScalable')].map(e => getComputedStyle(e, '::after').borderTopLeftRadius);
+        check('square cast photos get a square-cornered hover ring', sq === '4px', sq);
+        check('round cast photos (round themes) keep a round hover ring', round === '50%', round);
+        st.remove(); host.remove();
+    })();
+
+    // Edit Images: each image type gets a box of its own shape instead of one 16:9 box for everything.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = '.cardPadder-backdrop { padding-bottom: 56.25%; }\n' + T.buildCss(T.defaultValues());
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        const card = (t) => `<div class="card scalableCard imageEditorCard backdropCard" data-imagetype="${t}"><div class="cardBox"><div class="cardPadder-backdrop"></div></div></div>`;
+        host.innerHTML = '<div id="images" class="itemsContainer vertical-wrap" style="display:flex;flex-wrap:wrap;width:2000px">' + card('Primary') + card('Backdrop') + card('Banner') + '</div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [poster, backdrop, banner] = [...host.querySelectorAll('.card')].map(c => [c.offsetWidth, c.querySelector('.cardPadder-backdrop').offsetHeight]);
+        check('Edit Images: posters get a tall box', poster[0] === 170 && poster[1] === 240, poster.join('x'));
+        check('Edit Images: backdrops stay 16:9, banners get a very wide box', backdrop[0] === 340 && Math.round(backdrop[1]) === 186 && banner[0] === 400 && banner[1] === 72, backdrop.join('x') + ' / ' + banner.join('x'));
+        st.remove(); host.remove();
+    })();
+
+    // Top bar button / tab side padding, newer (MUI) and classic (TV) headers.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { HeaderButtonPadding: '1', HeaderTabPadding: '1' }));
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        host.innerHTML = '<style>.tbpad button { font-size: inherit; }</style><div class="tbpad"><div class="MuiAppBar-root"><div class="MuiToolbar-root"><div class="MuiStack-root"><button class="MuiButton-root">Movies</button></div><button class="MuiIconButton-root">S</button></div></div>'
+            + '<div class="skinHeader"><button class="headerButton">S</button><button class="emby-tab-button">Home</button></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const pl = (s) => getComputedStyle(host.querySelector(s)).paddingLeft;
+        check('top bar icon buttons get extra side padding', pl('.MuiIconButton-root') === '18px' && pl('.headerButton') === '15.56px', pl('.MuiIconButton-root') + ' / ' + pl('.headerButton'));
+        check('top bar tabs get extra side padding', pl('.MuiButton-root') === '18px' && pl('.emby-tab-button') === '25px', pl('.MuiButton-root') + ' / ' + pl('.emby-tab-button'));
+        st.remove(); host.remove();
+    })();
+
+    // Editor's Choice plugin: with every option on, only its button follows the theme.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign({}, all, { AccentColor: '#e50914', CardBorderWidth: '3', EnableCardShadow: true, HideRatings: true }));
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="homeSectionsContainer"><div class="verticalSection section-1 editorsChoiceContainer"><h2 class="sectionTitle sectionTitle-cards">Featured</h2>'
+            + '<div class="splide cardScalable"><div class="editorsChoiceItemRating starRatingContainer">8.1</div>'
+            + '<button class="editorsChoiceItemButton raised button-submit emby-button">Play</button></div></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const banner = host.querySelector('.splide.cardScalable');
+        const bs = getComputedStyle(banner);
+        check("Editor's Choice banner keeps its shape (no radius, shadow or border)", bs.borderTopLeftRadius === '0px' && bs.boxShadow === 'none' && getComputedStyle(banner, '::before').content === 'none', bs.borderTopLeftRadius + ' | ' + bs.boxShadow + ' | ' + getComputedStyle(banner, '::before').content);
+        check("Editor's Choice rating stays visible with Hide Ratings on", getComputedStyle(host.querySelector('.editorsChoiceItemRating')).display === 'block');
+        check("Editor's Choice heading and spacing untouched", getComputedStyle(host.querySelector('.sectionTitle-cards')).zoom === '1' && getComputedStyle(host.querySelector('.editorsChoiceContainer')).marginBottom !== '0px');
+        check("Editor's Choice button follows the theme", getComputedStyle(host.querySelector('.editorsChoiceItemButton')).backgroundColor === 'rgb(229, 9, 20)', getComputedStyle(host.querySelector('.editorsChoiceItemButton')).backgroundColor);
+        st.remove(); host.remove();
+    })();
+
+    // Featured Next Up: rules survive on old TVs (no :is/:has) and avoid flex gap (Chrome 84+).
+    (() => {
+        const nuCss = T.buildCss(Object.assign(T.defaultValues(), { NextUpLayout: 'featured' }));
+        const s = new CSSStyleSheet();
+        s.replaceSync(nuCss.replace(/@import[^;]*;/g, ''));
+        const kept = [...s.cssRules].filter(r => !(r.selectorText && /:has\(|:is\(/.test(r.selectorText))).map(r => r.cssText).join('\n');
+        check('featured Next Up rules kept (old TVs too)', kept.indexOf('.nextUpItems > .card > .cardBox') !== -1 && kept.indexOf('.nextUpItems .cardScalable') !== -1);
+        check('featured Next Up avoids flex gap (older TVs)', !/nextUpItems[^}]*gap:/.test(nuCss));
+    })();
+
+    // MUI reads the main colour from variables: "r g b" channels and valid hex shades.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { AccentColor: '#e50914' }));
+        document.head.appendChild(st);
+        const cs = getComputedStyle(document.documentElement), get = (n) => cs.getPropertyValue(n).trim();
+        check('main colour variable is the accent', get('--jf-palette-primary-main') === '#e50914', get('--jf-palette-primary-main'));
+        check('main colour channels are "r g b"', get('--jf-palette-primary-mainChannel') === '229 9 20', get('--jf-palette-primary-mainChannel'));
+        check('darker and lighter shades are valid colours', /^#[0-9a-f]{6}$/.test(get('--jf-palette-primary-dark')) && /^#[0-9a-f]{6}$/.test(get('--jf-palette-primary-light')), get('--jf-palette-primary-dark') + ' ' + get('--jf-palette-primary-light'));
+        st.remove();
+    })();
+
+    // TV cards carry Jellyfin's 0.5em focus border on .cardScalable; the outer radius must include it.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = '.card.show-focus:not(.show-animation) .cardBox:not(.visualCardBox) .cardScalable { border: 0.5em solid transparent; border-radius: 0.7em; }\n'
+            + '.personCard .cardScalable { border-radius: 50% !important; }\n'
+            + T.buildCss(Object.assign(T.defaultValues(), { BorderRadius: '0.4', CardBorderWidth: '2' }));
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        host.innerHTML = '<div class="card show-focus"><div class="cardBox"><div class="cardScalable"></div></div></div>'
+            + '<div class="card show-focus personCard"><div class="cardBox"><div class="cardScalable"></div></div></div>'
+            + '<div class="card"><div class="cardBox visualCardBox"><div class="cardScalable"></div></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [tv, person, visual] = host.querySelectorAll('.card');
+        const got = getComputedStyle(tv.querySelector('.cardScalable')).borderTopLeftRadius;
+        check('TV poster radius includes the focus border', got === '9px', got);
+        const border = getComputedStyle(tv.querySelector('.cardScalable'), '::before').borderTopLeftRadius;
+        check('card border follows the image corners, not the TV focus frame', border === '4px', border);
+        const round = getComputedStyle(person.querySelector('.cardScalable')).borderTopLeftRadius;
+        check('round cast photos stay round on TV', round === '50%', round);
+        const vbox = getComputedStyle(visual.querySelector('.visualCardBox')).borderTopLeftRadius;
+        check('visual card box uses the card radius', vbox === '4px', vbox);
+        st.remove(); host.remove();
+    })();
+
+    // Titles on the poster: on TV the fade stays inside the 0.5em focus border; other cards are unchanged.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { CardTitlePosition: 'overlay' }));
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        const card = (cls, box) => `<div class="card ${cls}"><div class="cardBox ${box}"><div class="cardScalable"></div><div class="cardFooter"></div></div></div>`;
+        host.innerHTML = card('show-focus', '') + card('', '') + card('show-focus', 'visualCardBox') + card('show-focus show-animation', '');
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [tv, desk, tvVisual, anim] = [...host.querySelectorAll('.cardFooter')].map(f => getComputedStyle(f));
+        check('TV: title fade stays inside the focus border', tv.left === '5px' && tv.right === '5px' && tv.bottom === '5px', tv.left + ' ' + tv.right + ' ' + tv.bottom);
+        check('desktop/phone: title fade still spans the poster', desk.left === '0px' && desk.bottom === '0px', desk.left + ' ' + desk.bottom);
+        check('TV visual card box and zooming TVs: title fade unchanged', tvVisual.left === '0px' && anim.left === '0px', tvVisual.left + ' / ' + anim.left);
+        st.remove(); host.remove();
+    })();
+
+    // The detail page poster keeps Jellyfin's zero margin; other cards follow Poster Spacing.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { GridSpacing: '1' }));
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        host.innerHTML = '<div class="detailImageContainer"><div class="card show-focus"><div class="cardBox"></div></div></div><div class="card"><div class="cardBox"></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [poster, other] = [...host.querySelectorAll('.cardBox')].map(b => getComputedStyle(b).marginLeft);
+        check('detail poster has no spacing margin (desktop, TV, phone)', poster === '0px', poster);
+        check('other cards keep Poster Spacing', other === '10px', other);
+        st.remove(); host.remove();
+    })();
+
+    // Row padding for hover zoom only where hover exists (not phones or TV remotes).
+    (() => {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(T.buildCss(T.defaultValues()).replace(/@import[^;]*;/g, ''));
+        const rules = [...sheet.cssRules];
+        const bare = rules.some(r => r.selectorText && r.selectorText.indexOf('scrollSlider') !== -1);
+        const inHover = rules.some(r => r.media && /hover: hover/.test(r.media.mediaText) && r.cssText.indexOf('.emby-scroller .scrollSlider') !== -1);
+        check('row zoom padding only applies with a hover pointer (not phone / TV)', !bare && inHover, 'bare=' + bare + ' inHover=' + inHover);
+    })();
+
+    // ---- Colour helpers ----
+    const [h, s, l] = T.rgbToHsl(229, 9, 20);
+    check('rgb -> hsl -> hex round trip', T.hslToHex(h, s, l) === '#e50914', T.hslToHex(h, s, l));
+
+    // A generated image: mostly grey with a strong blue patch; the suggested accent should be blue.
+    const c = document.createElement('canvas'); c.width = c.height = 40;
+    const g = c.getContext('2d'); g.fillStyle = '#777'; g.fillRect(0, 0, 40, 40); g.fillStyle = '#1560d6'; g.fillRect(10, 10, 20, 20);
+    const pal = await T.paletteFromImage(c.toDataURL(), 3);
+    const [ph] = pal.length ? T.rgbToHsl(parseInt(pal[0].slice(1, 3), 16), parseInt(pal[0].slice(3, 5), 16), parseInt(pal[0].slice(5, 7), 16)) : [0];
+    check('artwork palette finds the dominant vivid colour', pal.length > 0 && ph > 0.55 && ph < 0.7, JSON.stringify(pal));
+
+    // ---- Personal themes ----
+    T.setServerSettings({ AccentColor: '#00ff00', HideAlphaPicker: true, CardBorderWidth: '4', EnableHoverGlow: true, CustomFontFamily: 'Lobster' });
+    const nord = T.themeSettingsFor('Nord'), netflix = T.themeSettingsFor('Netflix Red');
+    check('personal preset replaces the server style (borders, glow, font)', netflix.CardBorderWidth === '0' && netflix.EnableHoverGlow === false && netflix.CustomFontFamily === 'Inter' && nord.CardBorderWidth === '1', JSON.stringify({ b: netflix.CardBorderWidth, g: netflix.EnableHoverGlow, f: netflix.CustomFontFamily }));
+    check('every styled preset sets its own font, corners, borders and glow', Object.keys(T.PRESETS).filter(k => k !== 'Jellyfin Default')
+        .every(k => ['BorderRadius', 'CardBorderWidth', 'EnableHoverGlow', 'EnableHoverZoom'].every(f => T.PRESETS[k][f] !== undefined)),
+        Object.keys(T.PRESETS).filter(k => k !== 'Jellyfin Default' && ['BorderRadius', 'CardBorderWidth', 'EnableHoverGlow', 'EnableHoverZoom'].some(f => T.PRESETS[k][f] === undefined)).join(', '));
+    check('personal preset keeps the server layout options', T.themeSettingsFor('Nord').HideAlphaPicker === true && T.themeSettingsFor('Nord').AccentColor === '#88c0d0');
+    T.setServerSettings({ TvPlainBackground: true, AppBackgroundUrl: 'https://example.com/a.jpg' });
+    check('personal preset keeps the plain TV background', T.themeSettingsFor('Nord').TvPlainBackground === true && T.themeSettingsFor('Nord').AppBackgroundUrl === '');
+    T.setServerSettings({ AccentColor: '#00ff00', HideAlphaPicker: true, CardBorderWidth: '4', EnableHoverGlow: true, CustomFontFamily: 'Lobster' });
+    check('"Jellyfin Default" personal theme is plain defaults', T.themeSettingsFor('Jellyfin Default').HideAlphaPicker === false);
+
+    // ---- Editor panel ----
+    T.openPanel();
+    await sleep(300);
+    check('panel opens', !!$('tb-live-panel') && $('tb-live-panel').style.transform === 'none');
+    $('tb_more_btn').click();
+    check('More menu opens', $('tb_more_menu').classList.contains('tb-open'));
+    $('tb_search').click();
+    check('More menu closes on an outside click', !$('tb_more_menu').classList.contains('tb-open'));
+    check('toolbar is two rows of equal-height controls', document.querySelectorAll('#tb_tools > .tb-tools-row').length === 2 && new Set([...document.querySelectorAll('#tb_tools .tb-ctl, #tb_tools .tb-seg, #tb_tools .tb-switch, #tb_more_btn')].map(e => e.offsetHeight)).size === 1);
+    check('saved settings load into the editor', $('tb_AccentColor').value === '#e50914' && $('tb_EnableOledBlack').checked);
+    check('hex box mirrors the picker', document.querySelector('.tb-hex[data-for="AccentColor"]').value === '#e50914');
+    check('changed markers', document.querySelector('.tb-field[data-id="AccentColor"]').classList.contains('tb-changed') && !document.querySelector('.tb-field[data-id="BorderRadius"]').classList.contains('tb-changed'));
+
+    $('tb_search').value = 'letter'; fire($('tb_search'));
+    const shown = [...document.querySelectorAll('.tb-field')].filter(f => f.style.display !== 'none').map(f => f.getAttribute('data-id'));
+    check('search filters options', shown.length === 1 && shown[0] === 'HideAlphaPicker', JSON.stringify(shown));
+    $('tb_search').value = ''; fire($('tb_search'));
+
+    $('tb_changed_only').checked = true; fire($('tb_changed_only'), 'change');
+    const changed = [...document.querySelectorAll('.tb-field')].filter(f => f.style.display !== 'none').map(f => f.getAttribute('data-id')).sort();
+    check('"Changed only" shows exactly the changed options', JSON.stringify(changed) === JSON.stringify(['AccentColor', 'EnableOledBlack', 'HideAlphaPicker']), JSON.stringify(changed));
+    $('tb_changed_only').checked = false; fire($('tb_changed_only'), 'change');
+
+    // Hex box -> picker.
+    const hex = document.querySelector('.tb-hex[data-for="AccentColor"]');
+    hex.value = '#336699'; fire(hex);
+    check('typing a hex colour updates the picker and preview', $('tb_AccentColor').value === '#336699' && $('tb-live-styles').textContent.indexOf('#336699') !== -1);
+
+    // Undo / redo (history snapshots are debounced by 400 ms).
+    await sleep(500);
+    $('tb_BorderRadius').value = '1'; fire($('tb_BorderRadius'));
+    await sleep(500);
+    check('undo enabled after a change', !$('tb_undo_btn').disabled);
+    $('tb_undo_btn').click();
+    check('undo restores the previous value', $('tb_BorderRadius').value === '0.2', $('tb_BorderRadius').value);
+    $('tb_redo_btn').click();
+    check('redo re-applies it', $('tb_BorderRadius').value === '1', $('tb_BorderRadius').value);
+
+    // Section reset (Colours is section 0).
+    document.querySelector('.tb-sec-reset[data-sec="0"]').click();
+    check('reset section restores that section only', $('tb_AccentColor').value === '#00a4dc' && $('tb_BorderRadius').value === '1');
+
+    // Collapse.
+    const toggle = document.querySelector('.tb-sec-toggle[data-sec="1"]');
+    toggle.click();
+    check('sections collapse', toggle.closest('.tb-section').classList.contains('tb-collapsed'));
+    toggle.click();
+
+    // Presets.
+    $('tb_preset').value = 'Nord'; fire($('tb_preset'), 'change');
+    check('preset applies', $('tb_AccentColor').value === '#88c0d0');
+
+    // Previous save.
+    $('tb_previous_btn').click();
+    check('"Previous save" loads the settings from before the last save', $('tb_AccentColor').value === '#123456');
+
+    // Export / import round trip.
+    $('tb_export_btn').click();
+    const code = $('tb_code_text').value;
+    $('tb_code_cancel').click();
+    $('tb_AccentColor').value = '#000000'; fire($('tb_AccentColor'));
+    $('tb_import_btn').click();
+    $('tb_code_text').value = 'not a theme'; $('tb_code_apply').click();
+    check('import rejects junk', $('tb_code').style.display === 'flex' && /doesn't look like/.test($('tb_code_msg').textContent));
+    $('tb_code_text').value = code; $('tb_code_apply').click();
+    check('import restores an exported theme', $('tb_AccentColor').value === '#123456');
+
+    // Preview modes.
+    document.querySelector('.tb-pv-mode[data-mode="phone"]').click();
+    check('phone preview narrows the preview', $('tb_pv_page').style.width === '230px');
+    document.querySelector('.tb-pv-mode[data-mode="desktop"]').click();
+
+    // Unsaved-changes guard.
+    $('tb_close_btn').click();
+    check('closing with unsaved changes asks first', $('tb_confirm').style.display === 'flex');
+    $('tb_confirm_discard').click();
+    check('discard closes and drops the live preview', $('tb-live-panel').style.transform !== 'none' && !$('tb-live-styles'));
+
+    log('RESULT: ' + passed + ' passed, ' + failed + ' failed');
+})().catch(e => { failed++; log('FAIL test run crashed: ' + e.message + '\n' + e.stack); log('RESULT: ' + passed + ' passed, ' + failed + ' failed'); });
+</script>
+</body></html>
