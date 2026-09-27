@@ -367,6 +367,26 @@
     check('search filters options', shown.length === 1 && shown[0] === 'HideAlphaPicker', JSON.stringify(shown));
     $('tb_search').value = ''; fire($('tb_search'));
 
+    // Phones (this test window is narrower than 820px): typing makes room, text boxes are 16px and selectable.
+    (() => {
+        const panelEl = $('tb-live-panel');
+        const narrow = window.matchMedia('(max-width: 820px)').matches;
+        $('tb_search').focus();
+        const typing = panelEl.classList.contains('tb-typing');
+        const hidden = getComputedStyle($('tb_pv_col')).display === 'none' && getComputedStyle($('tb_footer')).display === 'none';
+        check('phone: focusing search hides preview and Save bar', typing && (!narrow || hidden), 'narrow=' + narrow + ' typing=' + typing + ' hidden=' + hidden);
+        const cs = getComputedStyle($('tb_search'));
+        check('phone: search box is 16px (no iPhone zoom) and selectable', (!narrow || cs.fontSize === '16px') && cs.userSelect !== 'none', cs.fontSize + ' ' + cs.userSelect);
+        $('tb_search').blur();
+        check('phone: preview and Save bar come back after typing', !panelEl.classList.contains('tb-typing') && getComputedStyle($('tb_pv_col')).display !== 'none');
+        document.documentElement.classList.add('layout-mobile');
+        document.documentElement.style.userSelect = 'none';
+        check('phone layout (user-select: none on the page): search box still selectable', getComputedStyle($('tb_search')).userSelect !== 'none');
+        document.documentElement.classList.remove('layout-mobile');
+        document.documentElement.style.userSelect = '';
+        check('panel follows the visible screen height', !window.visualViewport || panelEl.style.height === window.visualViewport.height + 'px', panelEl.style.height);
+    })();
+
     $('tb_changed_only').checked = true; fire($('tb_changed_only'), 'change');
     const changed = [...document.querySelectorAll('.tb-field')].filter(f => f.style.display !== 'none').map(f => f.getAttribute('data-id')).sort();
     check('"Changed only" shows exactly the changed options', JSON.stringify(changed) === JSON.stringify(['AccentColor', 'EnableOledBlack', 'HideAlphaPicker']), JSON.stringify(changed));

@@ -1611,7 +1611,14 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                 @media (max-width: 820px) {
                     #tb_body { flex-direction: column; }
                     #tb_pv_col { width: auto; max-height: 45vh; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+                    /* Typing on a phone: the keyboard takes half the screen, so drop the preview and the Save bar
+                       until the box loses focus, or the search box and its results end up behind the keyboard. */
+                    #tb-live-panel.tb-typing #tb_pv_col, #tb-live-panel.tb-typing #tb_footer { display: none !important; }
+                    /* iPhones zoom the whole page into any text box under 16px, which knocks the panel off screen. */
+                    #tb-live-panel input:not([type="checkbox"]):not([type="range"]):not([type="color"]), #tb-live-panel select, #tb-live-panel textarea { font-size: 16px !important; }
                 }
+                /* The web client turns text selection off in its phone and TV layouts; some phones then won't type into boxes. */
+                #tb-live-panel input, #tb-live-panel textarea, #tb-live-panel select { -webkit-user-select: text; user-select: text; }
                 #tb_scroll.tb-slim-scroll::-webkit-scrollbar { width: 8px; }
                 #tb_scroll.tb-slim-scroll::-webkit-scrollbar-track { background: transparent; }
                 #tb_scroll.tb-slim-scroll::-webkit-scrollbar-thumb { background: var(--tb-accent); border-radius: 8px; }
@@ -1677,12 +1684,26 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                 <div id="tb_scroll">${toolsHtml}${inputsHtml}</div>
             </div>
             ${codeHtml}
-            <div style="padding: 20px 25px; background: rgba(0,0,0,0.6); border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 12px;">
+            <div id="tb_footer" style="padding: 20px 25px; background: rgba(0,0,0,0.6); border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 12px;">
                 <button id="tb_reset_btn" type="button" style="flex: 0 0 auto; padding: 15px 18px; background: #3a3a3a; color: #ddd; border: none; border-radius: 6px; font-size: 1em; cursor: pointer;">Reset</button>
                 <button id="tb_save_btn" type="button" style="flex: 1; padding: 15px; background: ${SAVE_COLOR}; color: #fff; border: none; border-radius: 6px; font-weight: bold; font-size: 1.1em; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">Save &amp; Reload</button>
             </div>
         `;
         document.body.appendChild(panel);
+
+        // Phones: keep the panel to the part of the screen above the on-screen keyboard (the page itself doesn't
+        // shrink for it), and make room while a text box has focus.
+        const isTextBox = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && /^(text|search|url|number|)$/.test(t.type)));
+        panel.addEventListener('focusin', (e) => { if (isTextBox(e.target)) panel.classList.add('tb-typing'); });
+        panel.addEventListener('focusout', (e) => { if (isTextBox(e.target) && !isTextBox(e.relatedTarget)) panel.classList.remove('tb-typing'); });
+        const vv = window.visualViewport;
+        if (vv) {
+            // The visible area: the whole window normally, the part above the keyboard while it's open.
+            const fit = () => { panel.style.height = vv.height + 'px'; panel.style.top = vv.offsetTop + 'px'; };
+            vv.addEventListener('resize', fit);
+            vv.addEventListener('scroll', fit);
+            fit();
+        }
 
         // Close: ask first (inside the panel, not a browser dialog) when there are unsaved changes.
         document.getElementById('tb_close_btn').addEventListener('click', function () {

@@ -42,6 +42,9 @@
                 .tbc details { background: #1a1a1f; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.8em 1.1em; margin-top: 0.7em; }
                 .tbc summary { cursor: pointer; color: #ddd; font-weight: 600; }
                 .tbc details p, .tbc details li { color: #aaa; line-height: 1.55; }
+                .tbc-changelog details[open] { border-color: color-mix(in srgb, var(--tbc-accent) 45%, transparent); }
+                .tbc-changelog ul { margin: 0.6em 0 0.2em 0; padding-left: 1.2em; }
+                .tbc-date { margin-left: 0.6em; color: #777; font-weight: 400; font-size: 0.88em; }
             </style>
 
             <!-- Hero -->
@@ -125,10 +128,55 @@
                     <li><b>No "Theme Editor" in the menu:</b> it's for administrators only. Check the status above: "Theme added to the web client" must be green. If not, make sure File Transformation is installed and enabled, then restart Jellyfin.</li>
                     <li><b>Changes don't show:</b> clear the browser's site data for Jellyfin (F12 &gt; Application &gt; Clear site data) and reload.</li>
                     <li><b>A page looks blank or broken:</b> open the Theme Editor and click <b>Diagnostics</b>. It checks the page scripts aren't damaged and that everything is up to date.</li>
-                    <li><b>TV looks different to the browser:</b> open the editor and click <b>Save &amp; Reload</b> to refresh the Custom CSS copy.</li>
+                    <li><b>TV looks different to the browser:</b> open the editor and click <b>Save &amp; Reload</b> to refresh the Custom CSS copy, then fully close and reopen the TV app (TVs often just resume it and keep the old theme).</li>
                     <li><b>Start over:</b> in the editor click <b>Reset</b>, then <b>Save &amp; Reload</b>.</li>
                 </ul>
             </details>
+
+            <!-- Changelog: newest first, the newest one open. -->
+            <div class="tbc-section-title">What's new</div>
+            <div class="tbc-changelog">
+                <details open>
+                    <summary>1.2.4 <span class="tbc-date">27 Sep 2026</span></summary>
+                    <ul>
+                        <li><b>TV apps:</b> the page colour, OLED black, background image, gradient and <b>Plain Background on TV</b> now actually show (older TV clients covered them with a solid layer).</li>
+                        <li><b>Text Size</b> keeps the larger TV text and the phone text size instead of forcing the desktop size.</li>
+                        <li>No extra gaps between rows on TV and phones.</li>
+                        <li>TV: detail page buttons keep a solid, easy-to-see focus; titles on posters, shadows and glow stay on the image; grid posters match row posters; the centred top bar centres the TV tabs too.</li>
+                        <li>More buttons and labels follow the accent colour in the TV apps; dialog headers follow the Menus colour.</li>
+                        <li>Theme Editor on phones: the preview and Save bar step aside while you type, the editor fits above the keyboard, and text boxes no longer make iPhones zoom in.</li>
+                        <li>This changelog.</li>
+                    </ul>
+                </details>
+                <details>
+                    <summary>1.2.3 <span class="tbc-date">25 Sep 2026</span></summary>
+                    <ul>
+                        <li>Cast hover ring matches square photos; Edit Images shows each image type in its own shape; larger image search pictures.</li>
+                        <li>Top bar button and tab padding, background gradients, featured Next Up, positioning options.</li>
+                        <li>Complete-style presets and a redesigned editor toolbar.</li>
+                        <li>Editor's Choice banner left untouched except its button; TV fixes; accent colour used everywhere.</li>
+                    </ul>
+                </details>
+                <details>
+                    <summary>1.2.2 <span class="tbc-date">23 Sep 2026</span></summary>
+                    <ul><li>Option to hide the titles under the My Media tiles.</li></ul>
+                </details>
+                <details>
+                    <summary>1.2.1 <span class="tbc-date">23 Sep 2026</span></summary>
+                    <ul>
+                        <li>Accent-coloured profile icon.</li>
+                        <li>Live and personal styles now override the Custom CSS copy.</li>
+                        <li>Diagnostics and colour suggestion fixes.</li>
+                    </ul>
+                </details>
+                <details>
+                    <summary>1.2.0 <span class="tbc-date">23 Sep 2026</span></summary>
+                    <ul>
+                        <li>Redesigned settings page, My Theme (personal themes), accent from each title's artwork, night mode, frosted glass, login page options.</li>
+                        <li>Undo / redo and Diagnostics in the editor.</li>
+                    </ul>
+                </details>
+            </div>
 
         </div>
     </div>
