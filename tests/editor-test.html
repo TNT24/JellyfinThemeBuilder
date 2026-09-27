@@ -60,6 +60,30 @@
         st.remove(); host.remove();
     })();
 
+    // Tick boxes and dialog headers (upload dialogs etc.) with a light accent, frosted glass and night mode.
+    (() => {
+        const st = document.createElement('style');
+        const base = '.checkboxIcon { color: #fff; } .formDialogHeader { background-color: #202020; }\n';
+        const host = document.createElement('div');
+        host.innerHTML = '<label><input type="checkbox" class="emby-checkbox" checked><span>x</span><span class="checkboxOutline"><span class="material-icons checkboxIcon checkboxIcon-checked">check</span></span></label>'
+            + '<div class="dialog"><div class="formDialogHeader">Upload</div><div class="formDialogFooter">f</div></div>';
+        document.body.appendChild(host); document.head.appendChild(st);
+        st.textContent = base + T.buildCss(Object.assign(T.defaultValues(), { AccentColor: '#f5f5f7', SurfaceColor: '#222233' }));
+        const icon = getComputedStyle(host.querySelector('.checkboxIcon')).color;
+        check('tick stays visible on a light accent (dark tick)', icon === 'rgb(0, 0, 0)', icon);
+        const hdr = getComputedStyle(host.querySelector('.formDialogHeader')).backgroundColor;
+        check('dialog header follows the Menus colour', hdr === 'rgb(34, 34, 51)', hdr);
+        st.textContent = base + T.buildCss(Object.assign(T.defaultValues(), { GlassMenus: true }));
+        const gh = getComputedStyle(host.querySelector('.formDialogHeader')).backgroundColor, gf = getComputedStyle(host.querySelector('.formDialogFooter')).backgroundColor;
+        check('frosted glass: dialog header and footer show the glass', gh === 'rgba(0, 0, 0, 0)' && gf === 'rgba(0, 0, 0, 0)', gh + ' / ' + gf);
+        st.textContent = base + T.buildCss(Object.assign(T.defaultValues(), { NightMode: true, NightOled: true, GlassMenus: true }));
+        document.documentElement.classList.add('tb-night');
+        const nh = getComputedStyle(host.querySelector('.formDialogHeader')).backgroundColor;
+        document.documentElement.classList.remove('tb-night');
+        check('night true black: dialog header goes black too', nh === 'rgb(0, 0, 0)', nh);
+        st.remove(); host.remove();
+    })();
+
     // Text Size scales each layout's own base size instead of forcing the desktop one onto TV and phones.
     (() => {
         const c = T.buildCss(Object.assign(T.defaultValues(), { TextScale: '120' }));
@@ -384,6 +408,13 @@
         check('phone layout (user-select: none on the page): search box still selectable', getComputedStyle($('tb_search')).userSelect !== 'none');
         document.documentElement.classList.remove('layout-mobile');
         document.documentElement.style.userSelect = '';
+        const tick = getComputedStyle(document.querySelector('#tb-live-panel .tb-field input[type="checkbox"]')).accentColor;
+        check('editor tick boxes use the accent', tick === getComputedStyle(panelEl).getPropertyValue('--tb-accent').trim() || /rgb\(229, 9, 20\)/.test(tick), tick);
+        const cbTarget = document.querySelector('#tb-live-panel .tb-field[data-id="HideAlphaPicker"] label');
+        const cb = cbTarget.querySelector('input'); const before = cb.checked;
+        cbTarget.querySelector('span').click();
+        check('tapping a tick box label toggles it', cb.checked !== before);
+        cbTarget.querySelector('span').click();
         check('panel follows the visible screen height', !window.visualViewport || panelEl.style.height === window.visualViewport.height + 'px', panelEl.style.height);
     })();
 

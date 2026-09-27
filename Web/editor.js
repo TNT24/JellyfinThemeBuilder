@@ -442,6 +442,8 @@ html { background-color: ${bg} !important; }
 .button-submit, .raised.button-submit, .navMenuOption-selected, .navMenuOption-selected * { color: ${accentText} !important; }
 .emby-tab-button-active, .emby-tab-button.emby-button-foreground, .button-link, .paper-icon-button-light:hover:not(:disabled) { color: ${accent} !important; }
 .emby-checkbox:checked + span + .checkboxOutline { background-color: ${accent} !important; border-color: ${accent} !important; }
+/* The tick is always white in the web client; on a light accent it vanished. */
+.emby-checkbox:checked + span + .checkboxOutline .checkboxIcon { color: ${accentText} !important; }
 .emby-input:focus, .emby-select-withcolor:focus, .emby-textarea:focus { border-color: ${accent} !important; }
 ::selection { background: ${accent}; color: #fff; }
 
@@ -722,7 +724,9 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         if (layers.length && v.TvPlainBackground) css += `html.layout-tv { background: ${bg} !important; }\n`;
 
         // Frosted glass: see-through menus/dialogs that blur what's behind them (the top bar has its own settings).
-        if (v.GlassMenus) css += `.mainDrawer, .dialog, .actionSheet, .MuiPaper-root:not(.MuiAppBar-root), .appfooter, .toast { background-color: ${rgba(surface, v.GlassOpacity)} !important; backdrop-filter: blur(16px) saturate(1.2) !important; -webkit-backdrop-filter: blur(16px) saturate(1.2) !important; }\n`;
+        if (v.GlassMenus) css += `.mainDrawer, .dialog, .actionSheet, .MuiPaper-root:not(.MuiAppBar-root), .appfooter, .toast { background-color: ${rgba(surface, v.GlassOpacity)} !important; backdrop-filter: blur(16px) saturate(1.2) !important; -webkit-backdrop-filter: blur(16px) saturate(1.2) !important; }
+/* Dialog headers and footers show the dialog's own glass instead of a solid bar on top of it. */
+html .dialog .formDialogHeader:not(.formDialogHeader-clear), html .dialog .formDialogFooter:not(.formDialogFooter-clear) { background-color: transparent !important; }\n`;
 
         // Card titles.
         if (v.CardTitleLines === '2') css += `.cardText-first { white-space: normal !important; display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden !important; }\n`;
@@ -737,7 +741,7 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         // don't run it). The dimming layer ignores clicks.
         if (v.NightMode) {
             if (Number(v.NightDim) > 0) css += `html.tb-night::after { content: ''; position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,${v.NightDim}); pointer-events: none; z-index: 2147483000; }\n`;
-            if (v.NightOled) css += `html.tb-night { background-color: #000000 !important; }\nhtml.tb-night :is(.mainDrawer, .dialog, .actionSheet, .MuiPaper-root:not(.MuiAppBar-root), .appfooter, .toast) { background-color: #000000 !important; }\n`;
+            if (v.NightOled) css += `html.tb-night { background-color: #000000 !important; }\nhtml.tb-night :is(.mainDrawer, .dialog, .actionSheet, .MuiPaper-root:not(.MuiAppBar-root), .appfooter, .toast, .formDialogHeader:not(.formDialogHeader-clear), .formDialogFooter:not(.formDialogFooter-clear), .paperList, .collapseContent) { background-color: #000000 !important; }\n`;
         }
 
         css += layoutCss(v);
@@ -1619,6 +1623,8 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                 }
                 /* The web client turns text selection off in its phone and TV layouts; some phones then won't type into boxes. */
                 #tb-live-panel input, #tb-live-panel textarea, #tb-live-panel select { -webkit-user-select: text; user-select: text; }
+                /* The editor's own tick boxes and sliders follow the accent being edited, not the browser's blue. */
+                #tb-live-panel input[type="checkbox"], #tb-live-panel input[type="range"] { accent-color: var(--tb-accent, #00a4dc); }
                 #tb_scroll.tb-slim-scroll::-webkit-scrollbar { width: 8px; }
                 #tb_scroll.tb-slim-scroll::-webkit-scrollbar-track { background: transparent; }
                 #tb_scroll.tb-slim-scroll::-webkit-scrollbar-thumb { background: var(--tb-accent); border-radius: 8px; }
