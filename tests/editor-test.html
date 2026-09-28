@@ -164,7 +164,9 @@
         ['wide tiles', '.backdropCard .cardScalable'], ['profile icon (MUI)', 'MuiAvatar-colorDefault'], ['poster size', '.vertical-wrap > .portraitCard'], ['card title overlay', '.cardFooter'], ['centred TV header', '.skinHeader .headerLeft .pageTitle'], ['hidden poster gap', '.detailPagePrimaryContent'], ['toggle switches', 'mdl-switch__thumb'],
         ['see-through background layer', '.backgroundContainer:not(.withBackdrop)'], ['TV text size', 'html.layout-tv'], ['TV grid sizes', '.layout-tv .vertical-wrap > .portraitCard'],
         ['TV card shadow', '-0.5em'], ['TV detail button focus', '.show-focus:focus .material-icons'], ['TV floating button focus', '.layout-tv .emby-button.detailFloatingButton:focus'],
-        ['multi-select bar', '.selectionCommandsPanel'], ['dialog headers', '.formDialogHeader'], ['no TV header blur', '.layout-tv .skinHeader'], ['centred TV tab strip', '.headerTabs { margin-left: auto']
+        ['multi-select bar', '.selectionCommandsPanel'], ['dialog headers', '.formDialogHeader'], ['no TV header blur', '.layout-tv .skinHeader'], ['centred TV tab strip', '.headerTabs { margin-left: auto'],
+        ['profile icon (classic)', '.headerUserButton:not(.headerUserButtonRound)'], ['watched dimming', '.layout-tv .cardIndicators .playedIndicator'],
+        ['version count badge', '.mediaSourceIndicator'], ['solid menus, no blur', 'html.layout-tv .mainDrawer'], ['old client poster gap', '.detailPagePrimaryContainer.padded-left']
     ].forEach(([name, needle]) => check('old TV browser keeps: ' + name, oldTv.indexOf(needle) !== -1, needle));
 
     // Positioning options applied to real card / detail markup.
@@ -183,6 +185,101 @@
         const pad = getComputedStyle(host.querySelector('.detailPagePrimaryContent'));
         check('poster on the right moves the text space to the left', parseFloat(pad.paddingRight) > parseFloat(pad.paddingLeft), pad.paddingLeft + ' / ' + pad.paddingRight);
         document.documentElement.classList.remove('layout-desktop');
+        st.remove(); host.remove();
+    })();
+
+    // Hidden poster on the older client TV apps bundle (10.10): it pads different containers than the server's client.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = '.layout-tv [dir="ltr"] .detailPagePrimaryContainer, [dir="ltr"] .detailPageContent { padding-left: 32.45vw; } .padded-right { padding-right: 3.3%; }\n'
+            + T.buildCss(Object.assign(T.defaultValues(), { HideDetailPoster: true }));
+        const host = document.createElement('div');
+        host.setAttribute('dir', 'ltr');
+        host.style.width = '1000px';
+        host.innerHTML = '<div class="itemDetailPage"><div class="detailPageWrapperContainer"><div class="detailPagePrimaryContainer padded-left padded-right"></div>'
+            + '<div class="detailPageSecondaryContainer"><div class="detailPageContent"><div class="detailPagePrimaryContent padded-right"></div></div></div></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        document.documentElement.classList.add('layout-tv');
+        const left = (s) => parseFloat(getComputedStyle(host.querySelector(s)).paddingLeft);
+        const inner = host.querySelector('.detailPagePrimaryContent').getBoundingClientRect().left - host.getBoundingClientRect().left;
+        check('TV (10.10): hidden poster frees the title area', left('.detailPagePrimaryContainer') < 50, left('.detailPagePrimaryContainer'));
+        check('TV (10.10): hidden poster frees the overview and rows', inner > 0 && inner < 50, inner);
+        document.documentElement.classList.remove('layout-tv');
+        st.remove(); host.remove();
+    })();
+
+    // Classic header profile button: accent only on the plain person icon, never behind a user picture.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { AccentColor: '#e50914', AccentProfileIcon: true }));
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="skinHeader"><button class="headerButton headerUserButton"><span class="material-icons person"></span></button>'
+            + '<button class="headerButton headerUserButton headerUserButtonRound"><div class="headerUserButtonRound" style="background-image:url(x.png)"></div></button></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [plain, pic] = host.querySelectorAll('button');
+        check('profile icon without a picture gets the accent (TV header)', getComputedStyle(plain).backgroundColor === 'rgb(229, 9, 20)', getComputedStyle(plain).backgroundColor);
+        check('profile picture gets no accent behind it', getComputedStyle(pic).backgroundColor !== 'rgb(229, 9, 20)', getComputedStyle(pic).backgroundColor);
+        st.remove(); host.remove();
+    })();
+
+    // Card buttons: the played tick and favourite heart keep their own colours over the general icon colour.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { CardButtonColor: '#ffffff', CardButtonPlayedColor: '#00ff00', CardButtonFavoriteColor: '#ff0000' }));
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="card"><div class="cardOverlayContainer"><button class="cardOverlayButton"><span class="material-icons cardOverlayButtonIcon check playstatebutton-icon-played"></span></button>'
+            + '<button class="cardOverlayButton"><span class="material-icons cardOverlayButtonIcon favorite ratingbutton-icon-withrating"></span></button>'
+            + '<button class="cardOverlayButton"><span class="material-icons cardOverlayButtonIcon more_vert"></span></button></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [played, fav, more] = [...host.querySelectorAll('.material-icons')].map(i => getComputedStyle(i).color);
+        check('card button: played tick uses its own colour', played === 'rgb(0, 255, 0)', played);
+        check('card button: favourite heart uses its own colour', fav === 'rgb(255, 0, 0)', fav);
+        check('card button: other icons use the icon colour', more === 'rgb(255, 255, 255)', more);
+        st.remove(); host.remove();
+    })();
+
+    // Badge text: automatic picks black on a light badge; turned off, the chosen colour is used.
+    (() => {
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="playedIndicator"><span class="material-icons check"></span></div>';
+        document.body.appendChild(host);
+        const colourWith = (o) => { const st = document.createElement('style'); st.textContent = T.buildCss(Object.assign(T.defaultValues(), { AccentColor: '#f5f5f7' }, o)); document.head.appendChild(st);
+            const c = getComputedStyle(host.querySelector('.material-icons')).color; st.remove(); return c; };
+        check('badge text automatic: black on a light badge', colourWith({ AutoBadgeText: true }) === 'rgb(0, 0, 0)', colourWith({ AutoBadgeText: true }));
+        check('badge text manual: uses the chosen colour', colourWith({ AutoBadgeText: false, BadgeTextColor: '#ff0000' }) === 'rgb(255, 0, 0)', colourWith({ AutoBadgeText: false, BadgeTextColor: '#ff0000' }));
+        host.remove();
+    })();
+
+    // Watched dimming on TV (no :has()): the badge's shadow darkens the poster, clipped to it; browsers keep the filter.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { WatchedDim: '0.4' }));
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="card"><div class="cardBox"><div class="cardScalable"><div class="cardImageContainer"><div class="cardIndicators"><div class="playedIndicator indicator"></div></div></div></div></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        document.documentElement.classList.add('layout-tv');
+        const badge = host.querySelector('.playedIndicator');
+        check('TV: watched posters are dimmed without :has()', /rgba\(0, 0, 0, 0\.4\) 0px 0px 0px/.test(getComputedStyle(badge).boxShadow), getComputedStyle(badge).boxShadow);
+        check('TV: poster clips the dimming', getComputedStyle(host.querySelector('.cardScalable')).overflow === 'hidden');
+        check('TV: no second (filter) dimming on newer TVs', getComputedStyle(host.querySelector('.cardImageContainer')).filter === 'none', getComputedStyle(host.querySelector('.cardImageContainer')).filter);
+        document.documentElement.classList.remove('layout-tv');
+        check('browsers: watched posters use the filter', getComputedStyle(host.querySelector('.cardImageContainer')).filter.indexOf('brightness') !== -1);
+        st.remove(); host.remove();
+    })();
+
+    // Centred top bar on a wide TV: the old client lifts the tabs into the title's row, so the title can't be centred too.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { TopBarLayout: 'centered' }));
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="skinHeader"><div class="headerLeft"><h3 class="pageTitle">Movies</h3></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const title = host.querySelector('.pageTitle');
+        check('centred top bar: title centred without tabs', getComputedStyle(title).position === 'absolute');
+        // The test window is narrower than 100em, so check the wide-screen rule itself.
+        const wideRule = [...st.sheet.cssRules].find(r => r.media && r.media.mediaText.indexOf('100em') !== -1);
+        const inner = wideRule && [...wideRule.cssRules].find(r => title.matches(r.selectorText.replace('.withSectionTabs ', '')) && r.selectorText.indexOf('.withSectionTabs') === 0);
+        check('centred top bar: title doesn\'t cover the tabs on wide screens', !!inner && inner.style.position === 'static', wideRule && wideRule.cssText);
         st.remove(); host.remove();
     })();
 

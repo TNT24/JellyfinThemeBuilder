@@ -154,6 +154,12 @@ Always:
   unreadable from the sofa.
 - **TV engines are old** (2020–2022 Tizen/webOS ≈ Chrome 69–85): no `:has()` (105), `:is()` (88) or `inset` (87).
   One unsupported selector drops the **whole rule**, so never mix a classic selector and a `:has()`/`:is()` one in one list.
+- **Check the TV client's own markup, not the server's.** The detail page poster gap (32.45vw) sits on `.detailRibbon` /
+  `.detailPagePrimaryContent` in 10.11+, but on `.detailPagePrimaryContainer` / `.detailPageContent` in 10.10 (where one wraps
+  the other). Clone `release-10.10.z` and grep it before writing TV rules.
+- On wide screens (≥100em, every TV) the classic header lifts `.headerTabs` into the title row (`margin-top: -4.3em`);
+  `body.withSectionTabs` says tabs are showing.
+- Classic `.headerUserButtonRound` means the user **has** a picture (a background image, not an `<img>`).
 
 ## 9. Debugging checklist (do this FIRST)
 

@@ -12,7 +12,7 @@
         { id: 'BackgroundColor', label: 'Page Background', type: 'color', default: '#101010' },
         { id: 'SurfaceColor', label: 'Menus & Dialogs', type: 'color', default: '#202020' },
         { id: 'EnableOledBlack', label: 'Force True OLED Black', type: 'checkbox', default: false },
-        { id: 'AutoAccentFromBackdrop', label: 'Match Accent to Each Title\'s Artwork (details pages)', type: 'checkbox', default: false },
+        { id: 'AutoAccentFromBackdrop', label: 'Match Accent to Each Title\'s Artwork (details pages, browsers only)', type: 'checkbox', default: false },
         { id: 'AccentSpinner', label: 'Accent-Coloured Loading Spinner', type: 'checkbox', default: true },
         { id: 'GlassMenus', label: 'Frosted Glass Menus & Dialogs', type: 'checkbox', default: false },
         { id: 'GlassOpacity', label: 'Glass Opacity', type: 'range', min: '0.3', max: '1', step: '0.05', default: '0.7' },
@@ -40,7 +40,7 @@
         { id: 'HeaderColor', label: 'Top Navigation Bar Colour', type: 'color', default: '#000000' },
         { id: 'HeaderOpacity', label: 'Top Bar Opacity', type: 'range', min: '0', max: '1', step: '0.05', default: '0.8' },
         { id: 'HeaderBlur', label: 'Header Blur (px)', type: 'range', min: '0', max: '30', step: '1', default: '15' },
-        { id: 'HeaderTransparentTop', label: 'Transparent Top Bar Until You Scroll', type: 'checkbox', default: false },
+        { id: 'HeaderTransparentTop', label: 'Transparent Top Bar Until You Scroll (browsers only)', type: 'checkbox', default: false },
         { id: 'TopBarLayout', label: 'Top Bar Layout', type: 'select', default: 'default', options: [['default', 'Logo and tabs on the left'], ['centered', 'Logo and tabs centred (Apple TV+)']] },
         { id: 'HeaderButtonPadding', label: 'Extra Side Padding: Icon Buttons (em)', type: 'range', min: '0', max: '1.5', step: '0.1', default: '0' },
         { id: 'HeaderTabPadding', label: 'Extra Side Padding: Library Tabs (em)', type: 'range', min: '0', max: '2', step: '0.1', default: '0' },
@@ -56,7 +56,7 @@
         { id: 'HomeTitleAlign', label: 'Row Title Alignment', type: 'select', default: 'left', options: [['left', 'Left'], ['center', 'Centred']] },
         { id: 'HomeTitleIndent', label: 'Extra Row Title Indent (em)', type: 'range', min: '0', max: '3', step: '0.25', default: '0' },
         { id: 'HomeRowSpacing', label: 'Extra Space Between Rows (em)', type: 'range', min: '0', max: '4', step: '0.25', default: '0' },
-        { id: 'HideMyMediaRow', label: 'Hide "My Media" Library Row', type: 'checkbox', default: false },
+        { id: 'HideMyMediaRow', label: 'Hide "My Media" Library Row (browsers and TVs from 2023 on)', type: 'checkbox', default: false },
         { id: 'HideMyMediaTitles', label: 'Hide Titles Under "My Media" Tiles', type: 'checkbox', default: false },
         { id: 'HideRowSeeAll', label: 'Hide Row Title Arrows (›)', type: 'checkbox', default: false },
 
@@ -179,7 +179,7 @@
         { id: 'NightOled', label: 'Use True Black at Night', type: 'checkbox', default: true },
 
         { section: 'User Themes' },
-        { id: 'AllowUserThemes', label: 'Let Every User Pick a Personal Theme (adds "My Theme" to their menu)', type: 'checkbox', default: false }
+        { id: 'AllowUserThemes', label: 'Let Every User Pick a Personal Theme (adds "My Theme" to their menu; TV apps use the server theme)', type: 'checkbox', default: false }
     ];
 
     // Saving plugin configuration needs an administrator, so the editor is only offered to admins.
@@ -328,8 +328,12 @@
         if (Number(v.HomeTitleIndent) > 0) css += `.homeSectionsContainer .sectionTitle-cards, .homeSectionsContainer .sectionTitleContainer-cards > a { margin-left: ${v.HomeTitleIndent}em !important; }\n`;
 
         // Detail page: the poster floats beside the text, which is padded 32.45vw to make room for it.
+        // Newer clients pad .detailRibbon and .detailPagePrimaryContent. Older ones (bundled in TV apps) pad
+        // .detailPagePrimaryContainer (10.10, the one with .padded-left; in 10.11+ it holds the ribbon) and
+        // .detailPageContent, which in 10.10 wraps .detailPagePrimaryContent, so that one mustn't pad again.
         const deskTv = (s) => `.layout-desktop .itemDetailPage ${s}, .layout-tv .itemDetailPage ${s}`;
-        const textAreas = `${deskTv('.detailRibbon')}, ${deskTv('.detailPagePrimaryContent')}`;
+        const textAreas = ['.detailRibbon', '.detailPagePrimaryContent', '.detailPagePrimaryContainer.padded-left', '.detailPageContent'].map(deskTv).join(', ');
+        if (v.HideDetailPoster || v.DetailPosterSide === 'right') css += `${deskTv('.detailPageContent .detailPagePrimaryContent')} { padding-left: 0 !important; padding-right: 0 !important; }\n`;
         if (v.HideDetailPoster) {
             // Without the poster, give its space back instead of leaving a gap.
             css += `${textAreas} { padding-left: 3.3% !important; padding-right: 3.3% !important; }\n`;
@@ -397,7 +401,10 @@ ${cards.map(c => `${c} .cardPadder-backdrop`).join(', ')} { padding-bottom: ${ra
 .skinHeader .headerTabs, .skinHeader .emby-tabs-slider { text-align: center !important; justify-content: center !important; }
 /* On wide TVs the tab strip is only 55% wide and sits on the left; centre the strip itself too. */
 .skinHeader .headerTabs { margin-left: auto !important; margin-right: auto !important; }
-.skinHeader .headerLeft .pageTitle { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; }\n`;
+.skinHeader .headerLeft .pageTitle { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; }
+/* On wide screens (every TV) the tabs move up into the title's row, so a centred title sat on top of them.
+   With tabs, the title stays on the left and the tabs take the centre. */
+@media all and (min-width: 100em) { .withSectionTabs .skinHeader .headerLeft .pageTitle { position: static; transform: none; } }\n`;
         }
         return css;
     }
@@ -501,11 +508,16 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
    more or the image inside is clipped to square corners. */
 .card.show-focus:not(.show-animation):not(.personCard) .cardBox:not(.visualCardBox) .cardScalable, .card.show-focus:not(.show-animation):not(.personCard) .cardBox.visualCardBox { border-radius: ${(Number(r) + 0.5).toFixed(2)}em !important; }
 .cardBox { margin: ${v.GridSpacing}em !important; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+/* In rows and grids the web client puts the whole gap on one side so the first poster lines up with the row
+   title; the same margin on both sides pushed every row in by one margin. */
+[dir="ltr"] .itemsContainer > .card > .cardBox { margin-left: 0 !important; margin-right: ${(Number(v.GridSpacing) * 2).toFixed(2)}em !important; }
+[dir="rtl"] .itemsContainer > .card > .cardBox { margin-right: 0 !important; margin-left: ${(Number(v.GridSpacing) * 2).toFixed(2)}em !important; }
 /* The detail page poster is a card too; the spacing above pushed it out of line with the page (it has no margin). */
 .detailImageContainer .card .cardBox { margin: 0 !important; }
 
-.countIndicator, .playedIndicator { background: ${watched} !important; }
-.countIndicator, .playedIndicator, .countIndicator *, .playedIndicator * { color: ${badgeText} !important; }
+/* The version-count and downloaded badges are the same hard-coded blue. */
+.countIndicator, .playedIndicator, .mediaSourceIndicator, .fullSyncIndicator { background: ${watched} !important; }
+.countIndicator, .playedIndicator, .mediaSourceIndicator, .fullSyncIndicator, .countIndicator *, .playedIndicator *, .fullSyncIndicator * { color: ${badgeText} !important; }
 .itemProgressBar { height: ${v.ProgressBarHeight}em !important; border-radius: ${v.ProgressTrackerRadius}em !important; }
 .itemProgressBarForeground { background-color: ${tracker} !important; border-radius: ${v.ProgressTrackerRadius}em !important; }
 /* Newer clients: MUI LinearProgress, which sets its own bar colour inline via a generated class. */
@@ -540,7 +552,10 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         // A thin border drawn inside the image edge (::before; ::after is the hover ring).
         if (Number(v.CardBorderWidth) > 0) css += `.cardScalable::before { content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0; border: ${v.CardBorderWidth}px solid ${rgba(v.CardBorderColor, v.CardBorderOpacity)}; border-radius: ${r}em; pointer-events: none; z-index: 2; }\n`;
         // Played items (they show the tick badge) get darker so unwatched ones stand out.
-        if (Number(v.WatchedDim) > 0) css += `.card:has(.playedIndicator) :is(.cardImageContainer, .cardImage) { filter: brightness(${(1 - Number(v.WatchedDim)).toFixed(2)}); }\n`;
+        // TVs older than Chrome 105 have no :has(), so there the tick badge casts a shadow over the whole poster instead
+        // (.cardScalable clips it to the poster, inside the TV focus frame). Same darkness as the filter.
+        if (Number(v.WatchedDim) > 0) css += `html:not(.layout-tv) .card:has(.playedIndicator) :is(.cardImageContainer, .cardImage) { filter: brightness(${(1 - Number(v.WatchedDim)).toFixed(2)}); }
+.layout-tv .cardIndicators .playedIndicator { box-shadow: 0 0 0 100em rgba(0,0,0,${Number(v.WatchedDim).toFixed(2)}) !important; }\n`;
         // The border is drawn *inside* the poster edge (an overlay on top of the image), so neither
         // neighbouring cards nor the row's scroll container can clip its left/right sides.
         if (v.EnableHoverGlow) css += `@media (hover: hover) and (pointer: fine) {
@@ -565,8 +580,9 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         // told apart by each icon's data-testid. Older clients use the material-icons font classes.
         css += `.cardOverlayButton, .cardOverlayButton .material-icons, .cardOverlayButtonIcon, .btnCardOptions, .btnCardOptions .material-icons,
 .cardOverlayButton .MuiSvgIcon-root:not(.MuiSvgIcon-colorError), .btnCardOptions .MuiSvgIcon-root { color: ${v.CardButtonColor} !important; }\n`;
-        css += `.playstatebutton-icon-played, [data-testid="CheckIcon"].MuiSvgIcon-colorError { color: ${v.CardButtonPlayedColor} !important; }\n`;
-        css += `.ratingbutton-icon-withrating, [data-testid="FavoriteIcon"].MuiSvgIcon-colorError { color: ${v.CardButtonFavoriteColor} !important; }\n`;
+        // The "on" icons need to out-rank the icon colour rule above (.cardOverlayButton .material-icons), or they stay white.
+        css += `.playstatebutton-icon-played, .cardOverlayButton .material-icons.playstatebutton-icon-played, [data-testid="CheckIcon"].MuiSvgIcon-colorError { color: ${v.CardButtonPlayedColor} !important; }\n`;
+        css += `.ratingbutton-icon-withrating, .cardOverlayButton .material-icons.ratingbutton-icon-withrating, [data-testid="FavoriteIcon"].MuiSvgIcon-colorError { color: ${v.CardButtonFavoriteColor} !important; }\n`;
         if (v.CardButtonGlow) css += `.cardOverlayButton .material-icons, .cardOverlayButtonIcon, .btnCardOptions .material-icons, .cardOverlayButton .MuiSvgIcon-root, .btnCardOptions .MuiSvgIcon-root { filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 6px currentColor); }\n`;
         if (Number(v.CardButtonBgOpacity) > 0) css += `.cardOverlayButton { background: rgba(0,0,0,${v.CardButtonBgOpacity}) !important; border-radius: 50% !important; }\n`;
 
@@ -712,7 +728,8 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
 
         // Profile icon: only the default letter/person avatar, not a user picture.
         if (v.AccentProfileIcon) css += `.MuiAppBar-root .MuiAvatar-colorDefault { background-color: ${accent} !important; color: ${accentText} !important; }
-.headerUserButtonRound:not(:has(img)) { background-color: ${accent} !important; color: ${accentText} !important; }\n`;
+/* Classic header (TV apps): .headerUserButtonRound means the user has a picture; without one it's a person icon. */
+.skinHeader .headerUserButton:not(.headerUserButtonRound) { background-color: ${accent} !important; color: ${accentText} !important; border-radius: 999px !important; }\n`;
         // Loading spinner: classic (mdl-spinner layers) and newer (MUI CircularProgress).
         if (v.AccentSpinner) css += `.mdl-spinner__layer, .progressring-spiner { border-color: ${accent} !important; }\n.MuiCircularProgress-root { color: ${accent} !important; }\n`;
 
@@ -726,7 +743,10 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         // Frosted glass: see-through menus/dialogs that blur what's behind them (the top bar has its own settings).
         if (v.GlassMenus) css += `.mainDrawer, .dialog, .actionSheet, .MuiPaper-root:not(.MuiAppBar-root), .appfooter, .toast { background-color: ${rgba(surface, v.GlassOpacity)} !important; backdrop-filter: blur(16px) saturate(1.2) !important; -webkit-backdrop-filter: blur(16px) saturate(1.2) !important; }
 /* Dialog headers and footers show the dialog's own glass instead of a solid bar on top of it. */
-html .dialog .formDialogHeader:not(.formDialogHeader-clear), html .dialog .formDialogFooter:not(.formDialogFooter-clear) { background-color: transparent !important; }\n`;
+html .dialog .formDialogHeader:not(.formDialogHeader-clear), html .dialog .formDialogFooter:not(.formDialogFooter-clear) { background-color: transparent !important; }
+/* TVs: blurring the page behind every menu is slow on TV graphics, and see-through without the blur is hard to read
+   from the sofa, so menus stay nearly solid there. */
+html.layout-tv .mainDrawer, html.layout-tv .dialog, html.layout-tv .actionSheet, html.layout-tv .appfooter, html.layout-tv .toast { background-color: ${rgba(surface, Math.max(Number(v.GlassOpacity), 0.95))} !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }\n`;
 
         // Card titles.
         if (v.CardTitleLines === '2') css += `.cardText-first { white-space: normal !important; display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden !important; }\n`;
