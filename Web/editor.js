@@ -255,7 +255,7 @@
         const c1 = rgba(v.BgGradientColor1, s), c2 = rgba(v.BgGradientColor2, s);
         const layers = [];
         if (v.AppAccentGlow) layers.push(`radial-gradient(ellipse at top, ${rgba(accent, 0.22)} 0%, transparent 60%)`);
-        if (v.AppBackgroundUrl) layers.push(`linear-gradient(rgba(0,0,0,${v.AppBackgroundDim}), rgba(0,0,0,${v.AppBackgroundDim}))`, `url('${v.AppBackgroundUrl.trim()}') center / cover no-repeat`);
+        if (v.AppBackgroundUrl) layers.push(`linear-gradient(rgba(0,0,0,${v.AppBackgroundDim}), rgba(0,0,0,${v.AppBackgroundDim}))`, `url('${cssStr(v.AppBackgroundUrl)}') center / cover no-repeat`);
         if (v.BgGradient === 'linear') layers.push(`linear-gradient(${Number(v.BgGradientAngle)}deg, ${c1} 0%, ${c2} 100%)`);
         if (v.BgGradient === 'radial') layers.push(`radial-gradient(ellipse at ${v.BgGradientPosition}, ${c1} 0%, ${c2} 75%)`);
         if (v.BgGradient === 'corners') layers.push(`radial-gradient(ellipse at top left, ${c1} 0%, transparent 55%)`, `radial-gradient(ellipse at bottom right, ${c2} 0%, transparent 55%)`);
@@ -409,6 +409,12 @@ ${cards.map(c => `${c} .cardPadder-backdrop`).join(', ')} { padding-bottom: ${ra
         return css;
     }
 
+    // Text typed into an option, made safe inside a single-quoted CSS string (url('…'), font names).
+    // A stray quote or line break would otherwise end the string and drop the whole rule.
+    function cssStr(s) {
+        return String(s).trim().replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/[\r\n]+/g, ' ');
+    }
+
     // Single source of truth for the theme: used for the live preview and saved verbatim for style.css.
     function buildCss(v) {
         const accent = v.AccentColor || '#00a4dc';
@@ -423,7 +429,7 @@ ${cards.map(c => `${c} .cardPadder-backdrop`).join(', ')} { padding-bottom: ${ra
 
         // @import must come before every other rule.
         if (v.CustomFontFamily) {
-            const fontUrl = v.CustomFontFamily.trim().replace(/ /g, '+');
+            const fontUrl = encodeURIComponent(v.CustomFontFamily.trim()).replace(/%20/g, '+');
             css += `@import url('https://fonts.googleapis.com/css2?family=${fontUrl}:wght@300;400;500;700&display=swap');\n`;
         }
 
@@ -596,7 +602,7 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
             css += `.itemBackdrop { filter: blur(${v.BannerBlur}px) brightness(${(1 - Number(v.BannerDim)).toFixed(2)}) !important; }\n`;
         }
 
-        if (v.CustomFontFamily) css += `body, h1, h2, h3, h4, h5, h6, button, input, .textActionButton { font-family: '${v.CustomFontFamily.trim()}', sans-serif !important; }\n`;
+        if (v.CustomFontFamily) css += `body, h1, h2, h3, h4, h5, h6, button, input, .textActionButton { font-family: '${cssStr(v.CustomFontFamily)}', sans-serif !important; }\n`;
         // Scale each layout's own base size (desktop 93%, TV 125% for the 20px TV minimum, phone 90%).
         if (Number(v.TextScale) !== 100) {
             const ts = (base) => (base * Number(v.TextScale) / 100).toFixed(2);
@@ -605,18 +611,18 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         if (v.EnableSlimScrollbars) css += `@media (pointer: fine) { ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: ${accent}; border-radius: 8px; } }\n`;
 
         // Newer (MUI) header: swap the logo image itself.
-        if (v.HeaderLogoUrl) css += `.MuiAppBar-root img[src*="banner"], .MuiAppBar-root img[src*="icon-transparent"] { content: url('${v.HeaderLogoUrl.trim()}') !important; height: ${v.HeaderLogoHeight}em !important; width: auto !important; }\n`;
+        if (v.HeaderLogoUrl) css += `.MuiAppBar-root img[src*="banner"], .MuiAppBar-root img[src*="icon-transparent"] { content: url('${cssStr(v.HeaderLogoUrl)}') !important; height: ${v.HeaderLogoHeight}em !important; width: auto !important; }\n`;
         // Classic header: the logo is a background image on the page title.
-        if (v.HeaderLogoUrl) css += `.pageTitleWithDefaultLogo { background-image: url('${v.HeaderLogoUrl.trim()}') !important; background-size: contain !important; background-repeat: no-repeat !important; background-position: left center !important; color: transparent !important; height: ${v.HeaderLogoHeight}em !important; min-width: 12em !important; }\n`;
+        if (v.HeaderLogoUrl) css += `.pageTitleWithDefaultLogo { background-image: url('${cssStr(v.HeaderLogoUrl)}') !important; background-size: contain !important; background-repeat: no-repeat !important; background-position: left center !important; color: transparent !important; height: ${v.HeaderLogoHeight}em !important; min-width: 12em !important; }\n`;
         // Login page. With blur, the image goes on a fixed layer behind the form so only the image is blurred.
         const cssText = (s) => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ');
         if (v.LoginBackgroundUrl && Number(v.LoginBackgroundBlur) > 0) {
             css += `#loginPage { background: transparent !important; }
-#loginPage::before { content: ''; position: fixed; top: -30px; right: -30px; bottom: -30px; left: -30px; z-index: -1; background: url('${v.LoginBackgroundUrl.trim()}') center / cover no-repeat; filter: blur(${v.LoginBackgroundBlur}px); }\n`;
+#loginPage::before { content: ''; position: fixed; top: -30px; right: -30px; bottom: -30px; left: -30px; z-index: -1; background: url('${cssStr(v.LoginBackgroundUrl)}') center / cover no-repeat; filter: blur(${v.LoginBackgroundBlur}px); }\n`;
         } else if (v.LoginBackgroundUrl) {
-            css += `#loginPage { background: url('${v.LoginBackgroundUrl.trim()}') center / cover no-repeat !important; }\n`;
+            css += `#loginPage { background: url('${cssStr(v.LoginBackgroundUrl)}') center / cover no-repeat !important; }\n`;
         }
-        if (v.LoginLogoUrl) css += `#loginPage .padded-bottom-page::before { content: ''; display: block; height: 5em; margin: 1.5em auto 1em auto; background: url('${v.LoginLogoUrl.trim()}') center / contain no-repeat; }\n`;
+        if (v.LoginLogoUrl) css += `#loginPage .padded-bottom-page::before { content: ''; display: block; height: 5em; margin: 1.5em auto 1em auto; background: url('${cssStr(v.LoginLogoUrl)}') center / contain no-repeat; }\n`;
         if (v.LoginWelcomeText) css += `#loginPage .manualLoginForm::before, #loginPage .visualLoginForm::before { content: "${cssText(v.LoginWelcomeText)}"; display: block; text-align: center; font-size: 1.3em; margin-bottom: 1em; }\n`;
         if (v.HideForgotPassword) css += `#loginPage .btnForgotPassword { display: none !important; }\n`;
 
@@ -910,7 +916,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
         // Page: background, font, text size.
         const page = q('page');
         page.style.background = bg;
-        page.style.fontFamily = v.CustomFontFamily ? `'${v.CustomFontFamily.trim()}', sans-serif` : 'sans-serif';
+        page.style.fontFamily = v.CustomFontFamily ? `'${cssStr(v.CustomFontFamily)}', sans-serif` : 'sans-serif';
         page.style.fontSize = (12 * Number(v.TextScale) / 100) + 'px';
 
         // Header over the backdrop: opacity, blur, logo.
@@ -921,7 +927,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
         const logo = q('logo');
         if (v.HeaderLogoUrl) {
             logo.textContent = '';
-            logo.style.backgroundImage = `url('${v.HeaderLogoUrl.trim()}')`;
+            logo.style.backgroundImage = `url('${cssStr(v.HeaderLogoUrl)}')`;
             logo.style.width = (Number(v.HeaderLogoHeight) * 36) + 'px';
             logo.style.height = (Number(v.HeaderLogoHeight) * 9) + 'px';
         } else {
@@ -1048,7 +1054,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
 
         // Login page background thumbnail.
         show('login', !!v.LoginBackgroundUrl);
-        q('login').style.backgroundImage = v.LoginBackgroundUrl ? `url('${v.LoginBackgroundUrl.trim()}')` : 'none';
+        q('login').style.backgroundImage = v.LoginBackgroundUrl ? `url('${cssStr(v.LoginBackgroundUrl)}')` : 'none';
 
         // Card titles: alignment and weight; app background image / accent glow behind the preview page.
         ['a', 'b'].forEach(k => {
@@ -1959,16 +1965,33 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
     const BRAND_START = '/* ThemeBuilder:start (managed by the Theme Builder plugin; edits here are overwritten) */';
     const BRAND_END = '/* ThemeBuilder:end */';
 
+    // An @import statement (url(…) or a quoted string, then optional media/layer conditions), or a comment so that
+    // an @import inside a comment is left alone. Must match ImportOrComment in Plugin.cs.
+    const IMPORT_OR_COMMENT = /\/\*[\s\S]*?\*\/|@import\s+(?:url\(\s*(?:'[^']*'|"[^"]*"|[^)]*)\s*\)|'[^']*'|"[^"]*")[^;]*;\s*/g;
+
+    // The admin's Custom CSS with our theme in its marked block and everything else kept. The admin's own @import
+    // lines go first: browsers ignore an @import that comes after any other rule, so leaving them below our block
+    // would silently switch off an imported theme or font. Must give the same result as BrandingSync.Merge in Plugin.cs.
+    function mergeBrandingCss(existing, css) {
+        let rest = existing || '';
+        const s = rest.indexOf(BRAND_START);
+        const e = s === -1 ? -1 : rest.indexOf(BRAND_END, s);
+        if (s !== -1 && e > s) rest = rest.slice(0, s) + rest.slice(e + BRAND_END.length);
+        // The manual @import from older versions is now redundant.
+        rest = rest.replace(/@import url\(['"]?\/ThemeBuilder\/style\.css['"]?\);?\s*/g, '');
+        const imports = [];
+        rest = rest.replace(IMPORT_OR_COMMENT, (m) => {
+            if (m.startsWith('/*')) return m;
+            imports.push(m.trim());
+            return '';
+        }).trim();
+        return (imports.length ? imports.join('\n') + '\n\n' : '') + `${BRAND_START}\n${css}\n${BRAND_END}` + (rest ? '\n\n' + rest : '');
+    }
+
     function syncBrandingCss(css) {
         return ApiClient.getNamedConfiguration('branding').then(function (branding) {
             branding = branding || {};
-            let existing = branding.CustomCss || '';
-            const s = existing.indexOf(BRAND_START);
-            const e = existing.indexOf(BRAND_END);
-            if (s !== -1 && e > s) existing = existing.slice(0, s) + existing.slice(e + BRAND_END.length);
-            // The manual @import from older versions is now redundant.
-            existing = existing.replace(/@import url\(['"]?\/ThemeBuilder\/style\.css['"]?\);?\s*/g, '').trim();
-            branding.CustomCss = `${BRAND_START}\n${css}\n${BRAND_END}` + (existing ? '\n\n' + existing : '');
+            branding.CustomCss = mergeBrandingCss(branding.CustomCss, css);
             return ApiClient.updateNamedConfiguration('branding', branding);
         });
     }
@@ -2357,7 +2380,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
     // The automated test page (tests/editor-test.html) sets window.__TB_TEST__ to get at the internals
     // without starting the runtime.
     if (window.__TB_TEST__) {
-        window.__ThemeBuilderTest = { buildCss, fields, PRESETS, PRESET_GROUPS, openPanel, defaultValues, paletteFromImage, rgbToHsl, hslToHex, themeSettingsFor,
+        window.__ThemeBuilderTest = { buildCss, mergeBrandingCss, BRAND_START, BRAND_END, fields, PRESETS, PRESET_GROUPS, openPanel, defaultValues, paletteFromImage, rgbToHsl, hslToHex, themeSettingsFor,
             setServerSettings: (s) => { serverSettings = Object.assign(defaultValues(), s); } };
     } else {
         // Used by the plugin's Dashboard page ("Open Theme Editor" and the status checks).

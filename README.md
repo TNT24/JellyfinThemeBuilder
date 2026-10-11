@@ -76,14 +76,14 @@ Presets include Jellyfin Default, OLED Black, Minimal, Netflix Red, Disney+, App
 ```powershell
 dotnet build -c Release                  # bin/Release/net10.0/JellyfinThemeBuilder.dll
 powershell -File tests/run-tests.ps1     # editor tests in headless Chrome
-powershell -File build-release.ps1 -SourceUrlBase "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/vX.Y.Z"
+powershell -File build-release.ps1 -Changelog "What changed"
 ```
 
-`build-release.ps1` runs the tests, builds, and writes `release/ThemeBuilder_<version>.zip` and `release/manifest.json`. To publish a release:
+`build-release.ps1` runs the tests, builds, writes `release/ThemeBuilder_<version>.zip`, and updates `manifest.json` (in `release/` and at the repo root) to point at that version's GitHub release. To publish a release:
 
-1. Bump `<Version>` in `JellyfinThemeBuilder.csproj`.
-2. Run `build-release.ps1` with the release's download URL, as above.
-3. Copy `release/manifest.json` to the repo root, then commit and push.
-4. Run `gh release create vX.Y.Z release/ThemeBuilder_X.Y.Z.0.zip`.
+1. Bump `<Version>` in `JellyfinThemeBuilder.csproj` and add the changes to the changelog in `Configuration/configPage.html`.
+2. Run `build-release.ps1 -Changelog "…"`.
+3. Commit and push, including `manifest.json`.
+4. Run `gh release create vX.Y.Z release/ThemeBuilder_X.Y.Z.0.zip` (the script prints the exact command).
 
 Development notes and lessons learned are in [PLUGIN_NOTES.md](PLUGIN_NOTES.md).

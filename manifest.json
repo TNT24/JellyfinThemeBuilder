@@ -6,15 +6,15 @@
         "overview":  "Adds a Theme Editor to the user menu with a live preview. The theme applies to every web client and is copied into Custom CSS for TV apps.",
         "owner":  "Mark",
         "category":  "General",
-        "imageUrl":  "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.png",
+        "imageUrl":  "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.jpg",
         "versions":  [
                          {
-                             "version":  "1.2.8.0",
-                             "changelog":  "TV apps: the theme\u0027s Custom CSS copy is restored at server start if missing. Hover glow/zoom/shadow no longer clipped on the first poster. Editor text boxes can be typed in again on desktop.",
+                             "version":  "1.2.9.0",
+                             "changelog":  "Your own @import lines in Custom CSS (a community theme or font) keep working. Image links and font names with quotes or symbols no longer break the logo, background or font. Repository installs keep automatic updates on.",
                              "targetAbi":  "12.1.0.0",
-                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.8/ThemeBuilder_1.2.8.0.zip",
-                             "checksum":  "60710015e4e871e07ace7845e4744ff1",
-                             "timestamp":  "2026-10-11T10:06:53Z"
+                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.9/ThemeBuilder_1.2.9.0.zip",
+                             "checksum":  "f3610ad1b89df6801a25bf3107201d98",
+                             "timestamp":  "2026-10-11T10:37:42Z"
                          }
                      ]
     }

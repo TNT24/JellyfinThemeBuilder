@@ -236,6 +236,34 @@
         host.remove();
     })();
 
+    // Custom CSS copy (TV apps): the admin's own CSS is kept, and their @import lines stay first so browsers still load them.
+    (() => {
+        const M = T.mergeBrandingCss, S = T.BRAND_START, E = T.BRAND_END;
+        const own = "/* my theme */\n@import url('https://cdn.example.com/elegantfin.css');\n.x { color: red; }\n@import \"https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap\" screen;";
+        const out = M(own, '.theme { color: blue; }');
+        check('Custom CSS: own @import lines come before the theme', out.indexOf('elegantfin') < out.indexOf(S) && out.indexOf('family=Inter:wght@400;700') < out.indexOf(S), out);
+        check('Custom CSS: own rules and comments kept after the theme', out.indexOf('.x { color: red; }') > out.indexOf(E) && out.indexOf('/* my theme */') > out.indexOf(E));
+        check('Custom CSS: nothing but the @imports before the theme', out.slice(0, out.indexOf(S)) === "@import url('https://cdn.example.com/elegantfin.css');\n@import \"https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap\" screen;\n\n", JSON.stringify(out.slice(0, out.indexOf(S))));
+        check('Custom CSS: saving again changes nothing', M(out, '.theme { color: blue; }') === out);
+        const again = M(out, '.theme { color: green; }');
+        check('Custom CSS: a new save replaces the block, not adds one', again.split(S).length === 2 && again.indexOf('color: blue') === -1 && again.indexOf('color: green') !== -1);
+        const commented = M('/* @import url(old.css); */\n.y { top: 0; }', '.t {}');
+        check('Custom CSS: an @import inside a comment stays in the comment', commented.indexOf('/* @import url(old.css); */') > commented.indexOf(E));
+        check('Custom CSS: old manual style.css import removed', M("@import url('/ThemeBuilder/style.css');\n.z {}", '.t {}').indexOf('/ThemeBuilder/style.css') === -1);
+        const stray = M(E + '\n.a {}\n' + S + '\n.old {}\n' + E, '.t {}');
+        check('Custom CSS: a stray end marker before the block doesn\'t duplicate it', stray.split(S).length === 2 && stray.indexOf('.old {}') === -1, stray);
+    })();
+
+    // Typed-in URLs and font names can't break their rule.
+    (() => {
+        const rulesOf = (o) => { const sh = new CSSStyleSheet(); sh.replaceSync(T.buildCss(Object.assign(T.defaultValues(), o)).replace(/@import[^\n]*\n/g, '')); return [...sh.cssRules].map(r => r.cssText).join('\n'); };
+        check('login logo URL with a quote keeps its rule', rulesOf({ LoginLogoUrl: "https://example.com/it's.png" }).indexOf('padded-bottom-page::before') !== -1);
+        check('header logo URL with a quote keeps its rule', rulesOf({ HeaderLogoUrl: "https://example.com/o'brien.png" }).indexOf('pageTitleWithDefaultLogo') !== -1);
+        check('login background URL with a quote keeps its rule', rulesOf({ LoginBackgroundUrl: "https://example.com/a'b.jpg" }).indexOf('#loginPage') !== -1);
+        const fontCss = T.buildCss(Object.assign(T.defaultValues(), { CustomFontFamily: 'Noto Sans & Co' }));
+        check('font name is URL-encoded in the Google Fonts link', fontCss.indexOf('family=Noto+Sans+%26+Co:') !== -1, fontCss.split('\n')[0]);
+    })();
+
     // Card buttons: the played tick and favourite heart keep their own colours over the general icon colour.
     (() => {
         const st = document.createElement('style');

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,22 +122,35 @@ namespace JellyfinThemeBuilder
         public const string Start = "/* ThemeBuilder:start (managed by the Theme Builder plugin; edits here are overwritten) */";
         public const string End = "/* ThemeBuilder:end */";
 
-        // The Custom CSS with the saved theme in its marked block at the top, the rest left as it was;
-        // null when it already matches (or there's no saved theme yet). Same result as the editor's save.
+        // An @import statement, or a comment so that an @import inside a comment is left alone.
+        // Must match IMPORT_OR_COMMENT in Web/editor.js.
+        private static readonly Regex ImportOrComment = new Regex(
+            "/\\*[\\s\\S]*?\\*/|@import\\s+(?:url\\(\\s*(?:'[^']*'|\"[^\"]*\"|[^)]*)\\s*\\)|'[^']*'|\"[^\"]*\")[^;]*;\\s*");
+
+        // The Custom CSS with the saved theme in its marked block and the rest kept, the admin's own @import lines
+        // first (browsers ignore an @import after any other rule); null when it already matches (or there's no saved
+        // theme yet). Must give the same result as mergeBrandingCss in Web/editor.js.
         public static string? Merge(string? existing, string? css)
         {
             if (string.IsNullOrWhiteSpace(css)) return null;
             string rest = existing ?? "";
             int s = rest.IndexOf(Start, StringComparison.Ordinal);
             int e = s < 0 ? -1 : rest.IndexOf(End, s, StringComparison.Ordinal);
-            if (s >= 0 && e > s)
-            {
-                if (rest.Substring(s + Start.Length, e - s - Start.Length).Trim() == css.Trim()) return null;
-                rest = rest.Substring(0, s) + rest.Substring(e + End.Length);
-            }
+            if (s >= 0 && e > s) rest = rest.Substring(0, s) + rest.Substring(e + End.Length);
             // The manual @import from older versions is redundant, as in the editor.
-            rest = System.Text.RegularExpressions.Regex.Replace(rest, "@import url\\(['\"]?/ThemeBuilder/style\\.css['\"]?\\);?\\s*", "").Trim();
-            return Start + "\n" + css + "\n" + End + (rest.Length > 0 ? "\n\n" + rest : "");
+            rest = Regex.Replace(rest, "@import url\\(['\"]?/ThemeBuilder/style\\.css['\"]?\\);?\\s*", "");
+            var imports = new List<string>();
+            rest = ImportOrComment.Replace(rest, m =>
+            {
+                if (m.Value.StartsWith("/*", StringComparison.Ordinal)) return m.Value;
+                imports.Add(m.Value.Trim());
+                return "";
+            }).Trim();
+            string merged = (imports.Count > 0 ? string.Join("\n", imports) + "\n\n" : "")
+                + Start + "\n" + css + "\n" + End + (rest.Length > 0 ? "\n\n" + rest : "");
+            // Compare ignoring line endings and outer whitespace, which the config file may not keep exactly.
+            static string Norm(string x) => x.Replace("\r\n", "\n").Trim();
+            return Norm(merged) == Norm(existing ?? "") ? null : merged;
         }
     }
 

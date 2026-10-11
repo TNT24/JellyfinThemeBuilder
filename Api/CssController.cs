@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Text.Json;
 
 namespace JellyfinThemeBuilder.Api
 {
@@ -65,6 +66,12 @@ namespace JellyfinThemeBuilder.Api
             }
         }
 
+        private static JsonElement EmptyObject()
+        {
+            using var doc = JsonDocument.Parse("{}");
+            return doc.RootElement.Clone();
+        }
+
         // The saved theme settings (appearance only, nothing sensitive). Plugin configuration itself needs an
         // administrator, but every user's browser needs these for personal themes and the automatic accent.
         [HttpGet("settings")]
@@ -73,8 +80,22 @@ namespace JellyfinThemeBuilder.Api
         {
             Response.Headers.CacheControl = "no-cache";
             var config = Plugin.Instance.Configuration;
-            string settings = string.IsNullOrWhiteSpace(config.SettingsJson) ? "{}" : config.SettingsJson;
-            return Content($"{{\"version\":\"{Plugin.VersionText}\",\"cssVersion\":\"{config.CssVersion}\",\"settings\":{settings}}}", "application/json");
+            // Serialize properly so a damaged SettingsJson can't make the whole response invalid (every user's
+            // browser reads this); fall back to no settings, i.e. the defaults.
+            JsonElement settings;
+            try
+            {
+                using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(config.SettingsJson) ? "{}" : config.SettingsJson);
+                settings = doc.RootElement.ValueKind == JsonValueKind.Object ? doc.RootElement.Clone() : EmptyObject();
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "[ThemeBuilder] The saved theme settings are not valid JSON; serving the defaults.");
+                settings = EmptyObject();
+            }
+
+            string json = JsonSerializer.Serialize(new { version = Plugin.VersionText, cssVersion = config.CssVersion ?? "", settings });
+            return Content(json, "application/json");
         }
     }
 }

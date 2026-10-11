@@ -1,21 +1,26 @@
 # Builds a release package of Theme Builder:
 #   release\ThemeBuilder_<version>.zip   DLL + meta.json, ready to unzip into /config/plugins/ThemeBuilder/
 #   release\manifest.json                Jellyfin plugin-repository manifest (with the zip's MD5 checksum)
+#   manifest.json                        the same, at the repo root: what users' servers read
 #   release\checksums.txt                MD5 and SHA-256 of the zip
 #
 # Usage:
 #   powershell -File build-release.ps1
-#   powershell -File build-release.ps1 -SourceUrlBase "https://example.com/jellyfin"   # where the zip will be hosted
+#   powershell -File build-release.ps1 -Changelog "What changed"
+#   powershell -File build-release.ps1 -SourceUrlBase "https://example.com/jellyfin"   # host the zip elsewhere
 #   powershell -File build-release.ps1 -SkipTests
 #
-# To install from a repository instead of copying files: host manifest.json and the zip, then add the
-# manifest URL in Dashboard > Plugins > Repositories.
+# By default the zip is expected at the GitHub release v<major.minor.patch>. After running:
+#   git add manifest.json; git commit; git push
+#   gh release create v<version> release\ThemeBuilder_<version>.0.zip
 
 param(
-    [string]$SourceUrlBase = "https://YOUR-HOST/jellyfin-plugins",
+    [string]$SourceUrlBase = "",           # default: this version's GitHub release download URL
     [string]$TargetAbi = "12.1.0.0",
     [string]$Changelog = "",
-    [string]$ImageUrl = "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.png",
+    [string]$ImageUrl = "",                # catalog image; default: assets/thumb.jpg on GitHub
+    [switch]$NoImage,                      # leave the catalog image out
+    [string]$DefaultImageUrl = "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.jpg",
     [switch]$SkipTests
 )
 
@@ -38,6 +43,9 @@ $guid = ([regex]::Match((Get-Content (Join-Path $PSScriptRoot 'Plugin.cs') -Raw)
 $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $description = "Live theme editor for the Jellyfin web client: colours, cards, details pages, player, presets and more."
 $overview = "Adds a Theme Editor to the user menu with a live preview. The theme applies to every web client and is copied into Custom CSS for TV apps."
+$tag = 'v' + ([version]$version).ToString(3)
+if (-not $SourceUrlBase) { $SourceUrlBase = "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/$tag" }
+if (-not $ImageUrl -and -not $NoImage) { $ImageUrl = $DefaultImageUrl }
 
 $outDir = Join-Path $PSScriptRoot 'release'
 $stage = Join-Path $outDir 'stage'
@@ -58,7 +66,7 @@ $meta = [ordered]@{
     timestamp   = $timestamp
     version     = $version
     status      = "Active"
-    autoUpdate  = $false
+    autoUpdate  = $true          # Jellyfin keeps this value when installing from the repository
     assemblies  = @("JellyfinThemeBuilder.dll")
 }
 [IO.File]::WriteAllText((Join-Path $stage 'meta.json'), ($meta | ConvertTo-Json), (New-Object Text.UTF8Encoding $false))
@@ -82,7 +90,6 @@ $manifest = @(
         overview    = $overview
         owner       = "Mark"
         category    = "General"
-        imageUrl    = $ImageUrl
         versions    = @(
             [ordered]@{
                 version   = $version
@@ -95,7 +102,12 @@ $manifest = @(
         )
     }
 )
-[IO.File]::WriteAllText((Join-Path $outDir 'manifest.json'), (ConvertTo-Json -InputObject $manifest -Depth 5), (New-Object Text.UTF8Encoding $false))
+# Only list a catalog image when there is one; an empty imageUrl makes Jellyfin try to download nothing.
+if ($ImageUrl) { $manifest[0].Insert(6, 'imageUrl', $ImageUrl) }
+$manifestJson = ConvertTo-Json -InputObject $manifest -Depth 5
+[IO.File]::WriteAllText((Join-Path $outDir 'manifest.json'), $manifestJson, (New-Object Text.UTF8Encoding $false))
+# The copy users' servers read (raw.githubusercontent.com/.../main/manifest.json), so it can't drift from the release.
+[IO.File]::WriteAllText((Join-Path $PSScriptRoot 'manifest.json'), $manifestJson, (New-Object Text.UTF8Encoding $false))
 
 Write-Host ""
 Write-Host "Release $version" -ForegroundColor Green
@@ -103,3 +115,6 @@ Write-Host "  $zip"
 Write-Host "  MD5     $md5"
 Write-Host "  SHA-256 $sha"
 Write-Host "  manifest.json sourceUrl: $($SourceUrlBase.TrimEnd('/'))/$zipName"
+Write-Host ""
+Write-Host "Next: commit and push manifest.json, then:" -ForegroundColor Cyan
+Write-Host "  gh release create $tag release\$zipName --title `"Theme Builder $(([version]$version).ToString(3))`""
