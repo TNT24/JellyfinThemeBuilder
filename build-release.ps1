@@ -15,6 +15,7 @@ param(
     [string]$SourceUrlBase = "https://YOUR-HOST/jellyfin-plugins",
     [string]$TargetAbi = "12.1.0.0",
     [string]$Changelog = "",
+    [string]$ImageUrl = "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.png",
     [switch]$SkipTests
 )
 
@@ -81,6 +82,7 @@ $manifest = @(
         overview    = $overview
         owner       = "Mark"
         category    = "General"
+        imageUrl    = $ImageUrl
         versions    = @(
             [ordered]@{
                 version   = $version

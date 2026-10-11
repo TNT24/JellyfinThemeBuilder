@@ -1,4 +1,6 @@
-# Theme Builder for Jellyfin
+<p align="center"><img src="assets/logo.svg" width="128" alt="Theme Builder logo"></p>
+
+<h1 align="center">Theme Builder for Jellyfin</h1>
 
 Restyle Jellyfin without writing CSS. Theme Builder adds a **Theme Editor** to the web client with a live preview. You can change colours, cards, the top bar, details pages, the player and more, then save the theme for every user, including the TV apps.
 
