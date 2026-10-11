@@ -1,0 +1,20 @@
+[
+    {
+        "guid":  "fa3e0346-a82a-4dc0-a3dc-c20146da6cee",
+        "name":  "Theme Builder",
+        "description":  "Live theme editor for the Jellyfin web client: colours, cards, details pages, player, presets and more.",
+        "overview":  "Adds a Theme Editor to the user menu with a live preview. The theme applies to every web client and is copied into Custom CSS for TV apps.",
+        "owner":  "Mark",
+        "category":  "General",
+        "versions":  [
+                         {
+                             "version":  "1.2.8.0",
+                             "changelog":  "TV apps: the theme\u0027s Custom CSS copy is restored at server start if missing. Hover glow/zoom/shadow no longer clipped on the first poster. Editor text boxes can be typed in again on desktop.",
+                             "targetAbi":  "12.1.0.0",
+                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.8/ThemeBuilder_1.2.8.0.zip",
+                             "checksum":  "60710015e4e871e07ace7845e4744ff1",
+                             "timestamp":  "2026-10-11T10:06:53Z"
+                         }
+                     ]
+    }
+]
