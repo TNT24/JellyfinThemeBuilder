@@ -187,6 +187,9 @@ Always:
   `__TB_PLUGIN_ID__` / `__TB_VERSION__` placeholders, caches it, and serves it. This means real syntax highlighting and it can be tested on its own.
 - **Anonymous read-only settings endpoint.** Non-admin users can't read plugin configuration, so `GET /ThemeBuilder/settings`
   returns the public bits (settings JSON + versions). Never put secrets in there.
+- **Server-side branding copy.** `IServerConfigurationManager.GetConfiguration<BrandingOptions>("branding")` /
+  `SaveConfiguration("branding", …)` read and write Custom CSS from C#. Theme Builder's startup service re-adds its marked
+  block from the saved CSS when it's missing or stale (`BrandingSync.Merge`, same result as the editor's save).
 - **Rebuilding generated output after an update.** The server has no JS engine, so CSS is built in the browser. The config
   stores `CssVersion`; when an admin's browser sees it differs from the running plugin version, it regenerates the CSS, re-syncs
   the branding Custom CSS copy (for TV apps), and saves. So after an update, an admin has to open the web client once.

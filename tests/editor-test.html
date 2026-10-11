@@ -222,6 +222,20 @@
         st.remove(); host.remove();
     })();
 
+    // The web client clips each card to its box (contain: paint). Posters start at the card's left edge in rows, so with
+    // a shadow, glow or zoom the clipping has to go, or those are cut off on the left.
+    (() => {
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="itemsContainer" dir="ltr"><div class="card"><div class="cardBox"><div class="cardScalable"></div></div></div></div>';
+        document.body.appendChild(host);
+        const containWith = (o) => { const st = document.createElement('style'); st.textContent = '.card:not(.show-animation) { contain: layout style paint; }\n' + T.buildCss(Object.assign(T.defaultValues(), o)); document.head.appendChild(st);
+            const c = getComputedStyle(host.querySelector('.card')).contain; st.remove(); return c === 'content' || c === 'strict' ? c + ' paint' : c; };  // Chrome reports 'layout style paint' as 'content'
+        check('hover glow: cards not clipped to their box', containWith({ EnableHoverGlow: true, EnableHoverZoom: false }).indexOf('paint') === -1, containWith({ EnableHoverGlow: true }));
+        check('card shadow: cards not clipped to their box', containWith({ EnableCardShadow: true, EnableHoverZoom: false }).indexOf('paint') === -1);
+        check('no shadow, glow or zoom: web client clipping kept', containWith({ EnableCardShadow: false, EnableHoverZoom: false, EnableHoverGlow: false }).indexOf('paint') !== -1);
+        host.remove();
+    })();
+
     // Card buttons: the played tick and favourite heart keep their own colours over the general icon colour.
     (() => {
         const st = document.createElement('style');
@@ -487,6 +501,24 @@
     const shown = [...document.querySelectorAll('.tb-field')].filter(f => f.style.display !== 'none').map(f => f.getAttribute('data-id'));
     check('search filters options', shown.length === 1 && shown[0] === 'HideAlphaPicker', JSON.stringify(shown));
     $('tb_search').value = ''; fire($('tb_search'));
+
+    // An open MUI menu (or dialog) traps focus: on focusin anywhere outside it, it takes focus back. The editor's
+    // text boxes must keep focus anyway, or they can't be typed in.
+    (() => {
+        const trap = document.createElement('div');
+        trap.innerHTML = '<ul role="menu" tabindex="-1">menu</ul>';
+        document.body.appendChild(trap);
+        const menu = trap.firstChild;
+        const contain = (e) => { if (!trap.contains(e.target)) menu.focus(); };
+        document.addEventListener('focusin', contain);
+        menu.focus();
+        $('tb_search').focus();
+        check('search box keeps focus while a menu elsewhere traps focus', document.activeElement === $('tb_search'), document.activeElement && (document.activeElement.id || document.activeElement.tagName));
+        const url = document.querySelector('#tb-live-panel input[type="text"]');
+        if (url) { url.focus(); check('option text boxes keep focus too', document.activeElement === url); }
+        document.removeEventListener('focusin', contain);
+        $('tb_search').blur(); trap.remove();
+    })();
 
     // Phones (this test window is narrower than 820px): typing makes room, text boxes are 16px and selectable.
     (() => {

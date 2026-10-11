@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.Logging;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Model.Branding;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
@@ -110,17 +112,67 @@ namespace JellyfinThemeBuilder
         }
     }
 
+    // TV apps only get the theme through the server's Custom CSS (Dashboard > General), which the editor keeps a
+    // marked copy of on every save. If that copy goes missing (Custom CSS cleared or edited, a config backup
+    // restored), TV apps lose the theme until the next save; this puts the saved theme back.
+    public static class BrandingSync
+    {
+        // Must match BRAND_START / BRAND_END in Web/editor.js.
+        public const string Start = "/* ThemeBuilder:start (managed by the Theme Builder plugin; edits here are overwritten) */";
+        public const string End = "/* ThemeBuilder:end */";
+
+        // The Custom CSS with the saved theme in its marked block at the top, the rest left as it was;
+        // null when it already matches (or there's no saved theme yet). Same result as the editor's save.
+        public static string? Merge(string? existing, string? css)
+        {
+            if (string.IsNullOrWhiteSpace(css)) return null;
+            string rest = existing ?? "";
+            int s = rest.IndexOf(Start, StringComparison.Ordinal);
+            int e = s < 0 ? -1 : rest.IndexOf(End, s, StringComparison.Ordinal);
+            if (s >= 0 && e > s)
+            {
+                if (rest.Substring(s + Start.Length, e - s - Start.Length).Trim() == css.Trim()) return null;
+                rest = rest.Substring(0, s) + rest.Substring(e + End.Length);
+            }
+            // The manual @import from older versions is redundant, as in the editor.
+            rest = System.Text.RegularExpressions.Regex.Replace(rest, "@import url\\(['\"]?/ThemeBuilder/style\\.css['\"]?\\);?\\s*", "").Trim();
+            return Start + "\n" + css + "\n" + End + (rest.Length > 0 ? "\n\n" + rest : "");
+        }
+    }
+
     public class ThemeBuilderStartup : IHostedService
     {
         private readonly ILogger<ThemeBuilderStartup> _logger;
+        private readonly IServerConfigurationManager _config;
 
-        public ThemeBuilderStartup(ILogger<ThemeBuilderStartup> logger)
+        public ThemeBuilderStartup(ILogger<ThemeBuilderStartup> logger, IServerConfigurationManager config)
         {
             _logger = logger;
+            _config = config;
+        }
+
+        private void RestoreBrandingCopy()
+        {
+            try
+            {
+                string? css = Plugin.Instance?.Configuration.GeneratedCss;
+                var branding = _config.GetConfiguration<BrandingOptions>("branding");
+                string? merged = BrandingSync.Merge(branding.CustomCss, css);
+                if (merged == null) return;
+                branding.CustomCss = merged;
+                _config.SaveConfiguration("branding", branding);
+                _logger.LogInformation("[ThemeBuilder] The theme's copy in Custom CSS (used by TV apps) was missing or out of date; restored it from the saved theme.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[ThemeBuilder] Could not check the theme's copy in Custom CSS.");
+            }
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            RestoreBrandingCopy();
+
             _logger.LogInformation("[ThemeBuilder] Server booted. Registering global script with File Transformation.");
             
             try

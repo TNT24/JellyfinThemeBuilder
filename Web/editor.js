@@ -528,6 +528,9 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         // TV posters sit in a 0.5em see-through focus frame; a matching negative spread keeps the shadow (and the
         // hover glow below) on the image instead of floating 0.5em out around the empty frame.
         const tvFramed = '.card.show-focus:not(.show-animation) .cardBox:not(.visualCardBox) .cardScalable';
+        // The web client clips each card to its own box (contain: paint). In rows and grids the poster starts at the
+        // card's left edge (see the spacing rule above), so the shadow, hover glow and zoom were cut off on the left.
+        if (v.EnableCardShadow || v.EnableHoverZoom || v.EnableHoverGlow) css += `.card:not(.show-animation) { contain: layout style !important; }\n`;
         if (v.EnableCardShadow) css += `.cardScalable { box-shadow: 0 6px 16px rgba(0,0,0,0.55); }\n${tvFramed} { box-shadow: 0 6px 16px -0.5em rgba(0,0,0,0.55); }\n`;
         // Lift the hovered card above its neighbours, otherwise the next card paints over its zoom/glow edges.
         if (v.EnableHoverZoom || v.EnableHoverGlow) {
@@ -1720,7 +1723,12 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
         // Phones: keep the panel to the part of the screen above the on-screen keyboard (the page itself doesn't
         // shrink for it), and make room while a text box has focus.
         const isTextBox = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && /^(text|search|url|number|)$/.test(t.type)));
-        panel.addEventListener('focusin', (e) => { if (isTextBox(e.target)) panel.classList.add('tb-typing'); });
+        panel.addEventListener('focusin', (e) => {
+            if (isTextBox(e.target)) panel.classList.add('tb-typing');
+            // Open menus and dialogs trap focus by watching focusin on the document and pulling focus back to
+            // themselves; keep the editor's focus to itself so its text boxes can always be typed in.
+            e.stopPropagation();
+        });
         panel.addEventListener('focusout', (e) => { if (isTextBox(e.target) && !isTextBox(e.relatedTarget)) panel.classList.remove('tb-typing'); });
         const vv = window.visualViewport;
         if (vv) {
@@ -1947,6 +1955,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
     // reaches them, but every web-based client applies the server's Custom CSS (Dashboard > General).
     // Keep our theme in a marked block at the top of it (a font @import must come first) and leave
     // anything else the admin wrote there untouched.
+    // BRAND_START / BRAND_END must match BrandingSync in Plugin.cs (the server restores this block at startup).
     const BRAND_START = '/* ThemeBuilder:start (managed by the Theme Builder plugin; edits here are overwritten) */';
     const BRAND_END = '/* ThemeBuilder:end */';
 
@@ -2219,9 +2228,16 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
     }
 
     function closeMenus() {
-        // MUI dropdown: clicking its backdrop closes it.
-        const backdrop = document.querySelector('.MuiBackdrop-root');
-        if (backdrop) backdrop.click();
+        // MUI dropdown: clicking its backdrop closes it. Use the open menu's own backdrop (the last open one): the
+        // first backdrop on the page can belong to something else, which left the menu open, and an open MUI menu
+        // keeps pulling keyboard focus back to itself, so the editor's text boxes couldn't be typed in.
+        const open = Array.from(document.querySelectorAll('.MuiModal-root:not(.MuiModal-hidden), .MuiPopover-root, .MuiMenu-root'))
+            .filter(m => m.querySelector('.MuiBackdrop-root'));
+        const menu = open[open.length - 1];
+        if (menu) {
+            menu.querySelector('.MuiBackdrop-root').click();
+            menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        }
         // Legacy side drawer.
         if (document.querySelector('.mainDrawer') && window.Emby && Emby.Page && Emby.Page.closeDrawer) {
             try { Emby.Page.closeDrawer(); } catch (e) { /* ignore */ }
