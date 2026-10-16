@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Loader;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -186,6 +187,7 @@ namespace JellyfinThemeBuilder
         // How long to keep retrying the File Transformation registration (see RegisterWithRetriesAsync).
         private const int RegisterAttempts = 60;
         private static readonly TimeSpan RegisterRetryDelay = TimeSpan.FromSeconds(2);
+        private int _lastCopyCount;
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -197,107 +199,106 @@ namespace JellyfinThemeBuilder
             return Task.CompletedTask;
         }
 
-        // File Transformation 3.x resolves its services from the provider it was created with, and this early in startup
-        // that provider has already been disposed (ObjectDisposedException inside RegisterTransformation), so the script
-        // was never injected. It works once the server has finished starting, as other plugins registering from a
-        // startup task show. So retry for a while instead of giving up after the first try.
+        // File Transformation 3.x resolves its services from the provider it was created with. Jellyfin can load it more
+        // than once during startup, and a copy whose provider is already disposed throws ObjectDisposedException inside
+        // RegisterTransformation, so the script was never injected. Keep checking for the whole window and register once
+        // with every copy that accepts, since the copy that serves pages may only appear after an earlier one accepted.
         private async Task RegisterWithRetriesAsync()
         {
+            Exception? lastError = null;
             for (int attempt = 1; attempt <= RegisterAttempts; attempt++)
             {
-                bool? result = TryRegister(out Exception? error);
-                if (result == true)
-                {
-                    _logger.LogInformation("[ThemeBuilder] Successfully registered script injection{Attempt}.",
-                        attempt > 1 ? $" (attempt {attempt})" : "");
-                    return;
-                }
                 // null: File Transformation is missing or incompatible; retrying won't change that.
-                if (result == null) return;
-                if (attempt == 1)
+                if (TryRegister(out Exception? error) == null) return;
+                if (error != null) lastError = error;
+                if (attempt == 1 && _registered.Count == 0)
                 {
-                    _logger.LogInformation("[ThemeBuilder] File Transformation isn't ready yet ({Reason}); retrying until it is.",
-                        error?.GetBaseException().Message);
-                }
-                else if (attempt == RegisterAttempts)
-                {
-                    _logger.LogError(error, "[ThemeBuilder] Could not register with File Transformation after {Attempts} attempts. " +
-                        "The theme editor and script features won't load until Jellyfin is restarted.", RegisterAttempts);
-                    return;
+                    _logger.LogInformation("[ThemeBuilder] File Transformation isn't ready yet ({Copies} loaded copies; {Reason}); retrying until it is.",
+                        _lastCopyCount, error?.GetBaseException().Message);
                 }
                 await Task.Delay(RegisterRetryDelay).ConfigureAwait(false);
             }
+            if (_registered.Count == 0)
+            {
+                _logger.LogError(lastError, "[ThemeBuilder] Could not register with File Transformation after {Attempts} attempts. " +
+                    "The theme editor and script features won't load until Jellyfin is restarted.", RegisterAttempts);
+            }
         }
 
-        // true: registered. false: File Transformation threw (may work on a later try). null: it isn't usable at all.
+        // File Transformation copies already registered with (see RegisterWithRetriesAsync).
+        private readonly HashSet<System.Reflection.Assembly> _registered = new();
+
+        // Registers with every loaded File Transformation copy not registered yet. false: none of them accepted this time
+        // (error says why; a later try may work). null: File Transformation isn't usable at all. true otherwise.
         private bool? TryRegister(out Exception? error)
         {
             error = null;
-            try
+            string json = JsonSerializer.Serialize(new
             {
-                var ftAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                    .FirstOrDefault(x => x.FullName != null && x.FullName.Contains(".FileTransformation"));
+                id = "7c1e2b9a-4d3f-4a8e-9b61-5f2d8c0e1a47",
+                // Must be exactly "index.html". File Transformation groups transformations by this string and
+                // runs only one group per file: an exact name match wins, and other plugins register
+                // "index.html", so any other pattern here is never run for the real page.
+                // The same group also runs (as a regex) on chunks like "itemDetails-index-html.<hash>.chunk.js";
+                // InjectThemeEditorScript leaves anything that isn't a full HTML document untouched.
+                fileNamePattern = "index.html",
+                callbackAssembly = typeof(Plugin).Assembly.FullName,
+                callbackClass = typeof(Plugin).FullName,
+                callbackMethod = nameof(Plugin.InjectThemeEditorScript)
+            });
 
-                if (ftAssembly == null)
-                {
-                    _logger.LogWarning("[ThemeBuilder] File Transformation plugin assembly not found in the loaded assembly list. " +
-                        "Is it installed and did it load successfully? (A crash in an unrelated plugin during boot can prevent " +
-                        "other plugins' assemblies from ever loading, which will land you here silently.)");
-                    return null;
-                }
-
-                var interfaceType = ftAssembly.GetType("Jellyfin.Plugin.FileTransformation.PluginInterface");
-                if (interfaceType == null)
-                {
-                    _logger.LogWarning("[ThemeBuilder] File Transformation assembly was found but its PluginInterface type was not. " +
-                        "It may be an incompatible version.");
-                    return null;
-                }
-
-                var registerMethod = interfaceType.GetMethod("RegisterTransformation");
-                if (registerMethod == null)
-                {
-                    _logger.LogWarning("[ThemeBuilder] File Transformation's RegisterTransformation method was not found. " +
-                        "It may be an incompatible version.");
-                    return null;
-                }
-
-                string json = JsonSerializer.Serialize(new
-                {
-                    id = "7c1e2b9a-4d3f-4a8e-9b61-5f2d8c0e1a47",
-                    // Must be exactly "index.html". File Transformation groups transformations by this string and
-                    // runs only one group per file: an exact name match wins, and other plugins register
-                    // "index.html", so any other pattern here is never run for the real page.
-                    // The same group also runs (as a regex) on chunks like "itemDetails-index-html.<hash>.chunk.js";
-                    // InjectThemeEditorScript leaves anything that isn't a full HTML document untouched.
-                    fileNamePattern = "index.html",
-                    callbackAssembly = typeof(Plugin).Assembly.FullName,
-                    callbackClass = typeof(Plugin).FullName,
-                    callbackMethod = nameof(Plugin.InjectThemeEditorScript)
-                });
-
-                // File Transformation expects a Newtonsoft JObject. Resolve it at runtime so we
-                // don't need a compile-time Newtonsoft reference.
-                var jObjectType = AppDomain.CurrentDomain.GetAssemblies()
-                    .Select(a => a.GetType("Newtonsoft.Json.Linq.JObject"))
-                    .FirstOrDefault(t => t != null);
-                if (jObjectType == null)
-                {
-                    _logger.LogWarning("[ThemeBuilder] Newtonsoft.Json is not loaded; cannot register with File Transformation.");
-                    return null;
-                }
-
-                var parseMethod = jObjectType.GetMethod("Parse", new[] { typeof(string) });
-                var payload = parseMethod!.Invoke(null, new object[] { json });
-
-                registerMethod.Invoke(null, new object?[] { payload });
-                return true;
-            }
-            catch (Exception ex)
+            // Jellyfin can load File Transformation more than once during startup (each copy with its own static
+            // Instance), and the first copy found may be the one whose services were disposed: registering there
+            // throws every time. Try every loaded copy, newest first, until one accepts.
+            var candidates = AssemblyLoadContext.All.SelectMany(c => c.Assemblies)
+                .Concat(AppDomain.CurrentDomain.GetAssemblies())
+                .Where(a => a.FullName != null && a.FullName.Contains(".FileTransformation"))
+                .Distinct()
+                .Reverse()
+                .ToList();
+            if (candidates.Count == 0)
             {
-                error = ex;
-                return false;
+                _logger.LogWarning("[ThemeBuilder] File Transformation plugin assembly not found in the loaded assembly list. " +
+                    "Is it installed and did it load successfully? (A crash in an unrelated plugin during boot can prevent " +
+                    "other plugins' assemblies from ever loading, which will land you here silently.)");
+                return null;
             }
+
+            _lastCopyCount = candidates.Count;
+            bool anyUsable = false;
+            foreach (var ftAssembly in candidates)
+            {
+                var registerMethod = ftAssembly.GetType("Jellyfin.Plugin.FileTransformation.PluginInterface")?.GetMethod("RegisterTransformation");
+                var parameters = registerMethod?.GetParameters();
+                if (registerMethod == null || parameters == null || parameters.Length != 1) continue;
+                anyUsable = true;
+                if (_registered.Contains(ftAssembly)) continue;
+                try
+                {
+                    // File Transformation expects a Newtonsoft JObject. Build it with the JObject type this copy was
+                    // compiled against (its own parameter type), so no compile-time Newtonsoft reference is needed
+                    // and a second Newtonsoft copy can't cause a type mismatch.
+                    var parseMethod = parameters[0].ParameterType.GetMethod("Parse", new[] { typeof(string) });
+                    if (parseMethod == null) continue;
+                    var payload = parseMethod.Invoke(null, new object[] { json });
+                    registerMethod.Invoke(null, new object?[] { payload });
+                    _registered.Add(ftAssembly);
+                    _logger.LogInformation("[ThemeBuilder] Successfully registered script injection (File Transformation copy {Index} of {Count}, load context {Context}).",
+                        candidates.IndexOf(ftAssembly) + 1, candidates.Count, AssemblyLoadContext.GetLoadContext(ftAssembly)?.Name);
+                }
+                catch (Exception ex)
+                {
+                    error = ex;
+                }
+            }
+
+            if (!anyUsable)
+            {
+                _logger.LogWarning("[ThemeBuilder] File Transformation was found but its PluginInterface.RegisterTransformation was not. " +
+                    "It may be an incompatible version.");
+                return null;
+            }
+            return _registered.Count > 0;
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

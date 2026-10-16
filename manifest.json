@@ -9,12 +9,12 @@
         "imageUrl":  "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.jpg",
         "versions":  [
                          {
-                             "version":  "1.2.11.0",
-                             "changelog":  "Works with File Transformation 3.x again: its registration failed early in startup, so the Theme Editor menu entry, transparent top bar, night mode and per-title accent didn\u0027t load. Theme Builder now retries until File Transformation is ready. Also includes the 1.2.10 fixes (TV focus colours, round detail buttons, smaller Edit Images, A-Z picker).",
+                             "version":  "1.2.12.0",
+                             "changelog":  "Registers with File Transformation 3.x reliably: when Jellyfin has it loaded more than once at startup, Theme Builder registers with every copy that accepts instead of retrying the first one found, so the Theme Editor and script features load again.",
                              "targetAbi":  "12.1.0.0",
-                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.11/ThemeBuilder_1.2.11.0.zip",
-                             "checksum":  "c65f169d21cdec5aeeeb748b319787fd",
-                             "timestamp":  "2026-10-16T11:11:26Z"
+                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.12/ThemeBuilder_1.2.12.0.zip",
+                             "checksum":  "09ccba272a021910d75b8dfe145cef66",
+                             "timestamp":  "2026-10-16T11:17:39Z"
                          }
                      ]
     }
