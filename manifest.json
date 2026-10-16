@@ -9,12 +9,12 @@
         "imageUrl":  "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.jpg",
         "versions":  [
                          {
-                             "version":  "1.2.9.0",
-                             "changelog":  "Your own @import lines in Custom CSS (a community theme or font) keep working. Image links and font names with quotes or symbols no longer break the logo, background or font. Repository installs keep automatic updates on.",
+                             "version":  "1.2.10.0",
+                             "changelog":  "TV apps: focused top bar tabs, profile icon, Live TV date tabs, solid Play and submit buttons show focus clearly instead of text matching its background. Detail page buttons are one round shape on every screen. Edit Images and image search pictures are smaller and line up. The transparent top bar stays solid where the Theme Builder script can\u0027t run. A hidden A-Z picker comes back while a letter filter is active.",
                              "targetAbi":  "12.1.0.0",
-                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.9/ThemeBuilder_1.2.9.0.zip",
-                             "checksum":  "f3610ad1b89df6801a25bf3107201d98",
-                             "timestamp":  "2026-10-11T10:37:42Z"
+                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.10/ThemeBuilder_1.2.10.0.zip",
+                             "checksum":  "0d927fd2c634c4c5a9d54c907defec63",
+                             "timestamp":  "2026-10-16T11:07:12Z"
                          }
                      ]
     }

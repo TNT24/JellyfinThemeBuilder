@@ -333,7 +333,8 @@
         host.innerHTML = '<div class="availableImagesList vertical-wrap" style="display:flex;width:2000px"><div class="card imageEditorCard portraitCard"><div class="cardBox"><div class="cardFooter">TMDb</div></div></div><div class="card imageEditorCard backdropCard"></div></div>';
         document.head.appendChild(st); document.body.appendChild(host);
         const [p, b] = host.querySelectorAll('.card');
-        check('image search pictures are large (even with small posters)', getComputedStyle(p).width === '200px' && getComputedStyle(b).width === '340px', getComputedStyle(p).width + ' / ' + getComputedStyle(b).width);
+        // 11em-tall pictures (plus the 1em spacing): readable, and a row still fits in the dialog.
+        check('image search pictures are a fixed size (even with small posters)', getComputedStyle(p).width === '100px' && Math.round(parseFloat(getComputedStyle(b).width)) === 206, getComputedStyle(p).width + ' / ' + getComputedStyle(b).width);
         check('image search info and download button stay below the picture', getComputedStyle(p.querySelector('.cardFooter')).position !== 'absolute' && getComputedStyle(p.querySelector('.cardFooter')).opacity === '1');
         st.remove(); host.remove();
     })();
@@ -361,11 +362,98 @@
         const host = document.createElement('div');
         host.style.fontSize = '10px';
         const card = (t) => `<div class="card scalableCard imageEditorCard backdropCard" data-imagetype="${t}"><div class="cardBox"><div class="cardPadder-backdrop"></div></div></div>`;
-        host.innerHTML = '<div id="images" class="itemsContainer vertical-wrap" style="display:flex;flex-wrap:wrap;width:2000px">' + card('Primary') + card('Backdrop') + card('Banner') + '</div>';
+        host.innerHTML = '<div id="images" class="itemsContainer vertical-wrap" style="display:flex;flex-wrap:wrap;align-items:flex-start;width:2000px">' + card('Primary') + card('Backdrop') + card('Disc') + card('Banner') + '</div>';
         document.head.appendChild(st); document.body.appendChild(host);
-        const [poster, backdrop, banner] = [...host.querySelectorAll('.card')].map(c => [c.offsetWidth, c.querySelector('.cardPadder-backdrop').offsetHeight]);
-        check('Edit Images: posters get a tall box', poster[0] === 170 && poster[1] === 240, poster.join('x'));
-        check('Edit Images: backdrops stay 16:9, banners get a very wide box', backdrop[0] === 340 && Math.round(backdrop[1]) === 186 && banner[0] === 400 && banner[1] === 72, backdrop.join('x') + ' / ' + banner.join('x'));
+        const [poster, backdrop, disc, banner] = [...host.querySelectorAll('.card')].map(c => { const p = c.querySelector('.cardPadder-backdrop').getBoundingClientRect(); return [Math.round(c.getBoundingClientRect().width), Math.round(p.width), Math.round(p.height)]; });
+        check('Edit Images: posters get a tall box', poster[2] > poster[1] * 1.45, poster.join('x'));
+        check('Edit Images: backdrops stay 16:9, banners get a very wide box', backdrop[0] === 206 && backdrop[2] === 110 && banner[0] === 300 && banner[2] === 54, backdrop.join('x') + ' / ' + banner.join('x'));
+        check('Edit Images: a card is small enough for a row to fit the dialog (image 11em tall)', backdrop[2] === 110 && poster[0] < 90, poster.join('x'));
+        check('Edit Images: posters, discs and backdrops are the same height', poster[2] === backdrop[2] && disc[2] === backdrop[2], [poster[2], disc[2], backdrop[2]].join(' / '));
+        st.remove(); host.remove();
+        // Wider poster spacing takes more of each card, and the heights still match.
+        const st2 = document.createElement('style');
+        st2.textContent = '.cardPadder-backdrop { padding-bottom: 56.25%; }\n' + T.buildCss(Object.assign(T.defaultValues(), { GridSpacing: '1.5' }));
+        document.head.appendChild(st2); document.body.appendChild(host);
+        const [h1, h2] = [...host.querySelectorAll('.card')].slice(0, 2).map(c => Math.round(c.querySelector('.cardPadder-backdrop').getBoundingClientRect().height));
+        check('Edit Images: heights still match with wide poster spacing', h1 === h2, h1 + ' / ' + h2);
+        st2.remove(); host.remove();
+    })();
+
+    // Detail buttons: one round shape on every screen width, with Play's solid circle included.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = '.detailButton { padding: 0.7em 0.85em !important; margin: 0 !important; } .detailButton .material-icons { font-size: 1.6em; display: block; width: 1em; height: 1em; }\n'
+            + T.buildCss(Object.assign(T.defaultValues(), { FilledPlayButton: true, AccentColor: '#a970ff' }));
+        const host = document.createElement('div');
+        host.style.fontSize = '20px';
+        host.innerHTML = '<div class="itemDetailPage"><div class="mainDetailButtons" style="display:flex"><button class="button-flat btnPlay detailButton emby-button"><span class="material-icons"></span></button><button class="button-flat btnPlaystate detailButton emby-button"><span class="material-icons"></span></button>'
+            + '<button class="button-flat btnPlay detailButton emby-button show-focus" id="tvPlay"><span class="material-icons"></span></button></div></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [play, played] = [...host.querySelectorAll('.detailButton')].map(b => b.getBoundingClientRect());
+        check('detail Play button is a circle, not an oval', Math.round(play.width) === Math.round(play.height), play.width + 'x' + play.height);
+        check('every detail button is the same size and shape', Math.round(played.width) === Math.round(play.width) && getComputedStyle(host.querySelectorAll('.detailButton')[1]).borderRadius === '50%', played.width + ' vs ' + play.width);
+        const tv = host.querySelector('#tvPlay'); tv.focus();
+        check('TV: focused solid Play button inverts so focus shows', getComputedStyle(tv).backgroundColor === 'rgb(242, 242, 242)' && getComputedStyle(tv.querySelector('.material-icons')).color === 'rgb(169, 112, 255)', getComputedStyle(tv).backgroundColor);
+        st.remove(); host.remove();
+    })();
+
+    // TV top bar and other remote-focused controls: focus never leaves text the same colour as its background.
+    (() => {
+        const st = document.createElement('style');
+        // The 10.10 web client's own focus rules (what Tizen / webOS apps bundle).
+        st.textContent = '.emby-tab-button.show-focus:focus { background: 0 !important; } .emby-tab-button.show-focus:focus { color: #00a4dc; } .emby-button.show-focus:focus { background: #00a4dc; color: #fff; }\n'
+            + '.guide-date-tab-button.show-focus:focus { background-color: #00a4dc; color: #fff; } .paper-icon-button-light.show-focus:focus { color: #00a4dc; }\n'
+            + T.buildCss(Object.assign(T.defaultValues(), { AccentColor: '#e50914', AccentProfileIcon: true }));
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="skinHeader"><div class="headerTabs"><button class="emby-tab-button emby-button show-focus">Home</button></div>'
+            + '<button class="headerButton headerUserButton paper-icon-button-light show-focus"><span class="material-icons person"></span></button></div>'
+            + '<button class="emby-tab-button emby-button guide-date-tab-button show-focus">Today</button>'
+            + '<button class="raised button-submit emby-button show-focus">Sign In</button>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const look = (sel) => { const e = host.querySelector(sel); e.focus(); const cs = getComputedStyle(e); return [cs.backgroundColor, cs.color]; };
+        const tab = look('.headerTabs .emby-tab-button');
+        check('TV: focused header tab has readable text (no fill under accent text)', tab[0] === 'rgba(0, 0, 0, 0)' && tab[1] === 'rgb(229, 9, 20)', tab.join(' / '));
+        const date = look('.guide-date-tab-button');
+        check('TV: focused guide date tab is solid accent with contrasting text', date[0] === 'rgb(229, 9, 20)' && date[1] === 'rgb(255, 255, 255)', date.join(' / '));
+        const prof = look('.headerUserButton');
+        check('TV: focused profile icon stays visible on its accent circle', prof[0] !== prof[1] && prof[1] === 'rgb(229, 9, 20)', prof.join(' / '));
+        const sub = look('.button-submit');
+        check('TV: focused submit button differs from its unfocused accent', sub[0] !== 'rgb(229, 9, 20)' && sub[0] !== sub[1], sub.join(' / '));
+        st.remove(); host.remove();
+    })();
+
+    // Hidden A–Z picker: it comes back while a letter is picked, or a saved letter filter can't be seen or cleared.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { HideAlphaPicker: true }));
+        const host = document.createElement('div');
+        const mui = (sel) => `<div class="alphaPicker-fixed-right"><div class="MuiToggleButtonGroup-root"><button class="MuiToggleButton-root${sel ? ' Mui-selected' : ''}">L</button></div></div>`;
+        const classic = (sel) => `<div class="alphaPicker"><button class="alphaPickerButton${sel ? ' alphaPickerButton-selected' : ''}">L</button></div>`;
+        host.innerHTML = mui(false) + mui(true) + classic(false) + classic(true);
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [mOff, mOn, cOff, cOn] = [...host.children].map(e => getComputedStyle(e).display);
+        check('hidden A–Z picker stays hidden with no letter picked', mOff === 'none' && cOff === 'none', mOff + ' / ' + cOff);
+        check('hidden A–Z picker shows while a letter filter is active', mOn === 'block' && cOn === 'flex', mOn + ' / ' + cOn);
+        st.remove(); host.remove();
+    })();
+
+    // Transparent top bar: clear at the top only while editor.js runs (it sets tb-js and tb-scrolled). Clients that
+    // only get the Custom CSS copy keep a solid bar instead of one that never turns solid on scroll.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { HeaderTransparentTop: true, HeaderColor: '#102030', HeaderOpacity: '1' }));
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="MuiAppBar-root" style="transition:none !important">bar</div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const root = document.documentElement, bar = host.firstChild, bg = () => getComputedStyle(bar).backgroundColor;
+        const had = root.classList.contains('tb-js');
+        root.classList.remove('tb-js', 'tb-scrolled');
+        check('transparent top bar: stays solid without the script (Custom CSS only)', bg() === 'rgb(16, 32, 48)', bg());
+        root.classList.add('tb-js');
+        check('transparent top bar: clear at the top while the script runs', bg() === 'rgba(0, 0, 0, 0)', bg());
+        root.classList.add('tb-scrolled');
+        check('transparent top bar: solid once scrolled', bg() === 'rgb(16, 32, 48)', bg());
+        root.classList.remove('tb-scrolled'); if (!had) root.classList.remove('tb-js');
         st.remove(); host.remove();
     })();
 

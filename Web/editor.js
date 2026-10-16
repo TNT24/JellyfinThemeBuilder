@@ -369,19 +369,29 @@ ${nu} .cardText-first { font-size: 1.45em; font-weight: 600; opacity: 1; line-he
         }
 
         // Edit Images and image search dialogs: their cards use the page's poster widths (a percentage of the
-        // whole screen), which comes out tiny inside a dialog. Give each image type a fixed, larger size.
+        // whole screen), which comes out tiny inside a dialog. Give each image type a fixed size instead, small
+        // enough that a row of cards with their buttons fits in the dialog (an 18.5em-tall image filled it alone).
+        // Each card's box has the poster spacing as side margin (2 × spacing in all), which the image doesn't fill,
+        // so widths add it on top: card width = image height / image shape + spacing.
+        const gap = 2 * Number(v.GridSpacing), imgH = 11;
+        const w = (ratio) => Number((imgH * 100 / ratio + gap).toFixed(3));
         const pick = (shape) => `.vertical-wrap > .imageEditorCard.${shape}Card`;
-        css += `${pick('portrait')}, ${pick('square')} { width: 20em !important; max-width: 100%; }
-${pick('backdrop')} { width: 34em !important; max-width: 100%; }
-${pick('banner')} { width: 44em !important; max-width: 100%; }\n`;
+        // Search results keep a little more width for their provider / size / language lines under the picture.
+        css += `${pick('portrait')} { width: ${Math.max(w(150), 10)}em !important; max-width: 100%; }
+${pick('square')} { width: ${w(100)}em !important; max-width: 100%; }
+${pick('backdrop')} { width: ${w(56.25)}em !important; max-width: 100%; }
+${pick('banner')} { width: 30em !important; max-width: 100%; }\n`;
         // Edit Images shows every type in the same 16:9 box, so a poster came out tiny between empty sides.
-        // Give each image type (data-imagetype) a box of its own shape.
+        // Give each image type (data-imagetype) a box of its own shape. Posters, discs and 16:9 images (the backdrop
+        // rule above) share one height so a row of them lines up. Logos and banners are too wide for that height:
+        // logos get about half of it, banners a fixed width.
         const ei = (types, width, ratio) => {
             const cards = types.map(t => `.vertical-wrap > .imageEditorCard.backdropCard[data-imagetype="${t}"]`);
             return `${cards.join(', ')} { width: ${width}em !important; max-width: 100%; }
 ${cards.map(c => `${c} .cardPadder-backdrop`).join(', ')} { padding-bottom: ${ratio}% !important; }\n`;
         };
-        css += ei(['Primary', 'Profile', 'Box', 'BoxRear'], 17, 150) + ei(['Disc'], 17, 100) + ei(['Logo'], 26, 38) + ei(['Banner'], 40, 18.5);
+        const logoW = Number((imgH * 0.55 * 100 / 38 + gap).toFixed(3));
+        css += ei(['Primary', 'Profile', 'Box', 'BoxRear'], w(150), 150) + ei(['Disc'], w(100), 100) + ei(['Logo'], logoW, 38) + ei(['Banner'], 30, 18.5);
 
         // Top bar spacing: extra side padding on top of each button's own (MUI icon buttons 8px, classic 0.556em;
         // MUI tab buttons 8px, MUI view tabs 16px, classic tabs 1.5em). Icon buttons become pills instead of ovals.
@@ -476,12 +486,19 @@ html { background-color: ${bg} !important; }
 @media (hover: hover) and (pointer: fine) { .emby-tab-button:hover, .button-flat:hover { color: ${accent} !important; } .paper-icon-button-light:hover:not(:disabled) { background-color: ${rgba(accent, 0.2)} !important; } }
 .paper-icon-button-light:active:not(:disabled) { color: ${accent} !important; background-color: ${rgba(accent, 0.2)} !important; }
 /* Live TV guide: focused programme / channel and the date tabs (hard-coded blue in the TV apps' clients). */
-html .guide-channelHeaderCell:focus, html .programCell:focus, html .guide-date-tab-button.show-focus:focus { background-color: ${accent} !important; color: ${accentText} !important; }
+html .guide-channelHeaderCell:focus, html .programCell:focus { background-color: ${accent} !important; color: ${accentText} !important; }
 html .guide-date-tab-button.emby-tab-button-active, html .guide-date-tab-button:focus:not(.show-focus) { color: ${accent} !important; }
 html .card:focus .cardBox.visualCardBox, html .card:focus .cardBox:not(.visualCardBox) .cardScalable { border-color: ${accent} !important; }
 html .emby-button.show-focus:focus, html .button-submit:focus, html .raised:focus, html .fab:focus,
 html .emby-select-tv-withcolor:focus, html .alphaPickerButton-tv:focus { background-color: ${accent} !important; color: ${accentText} !important; }
+/* Submit buttons are already accent, so their focus is a lighter accent (as the web client's own), or it can't be seen. */
+html .raised.button-submit:focus, html .emby-button.button-submit.show-focus:focus { background-color: ${shade(accent, 0.2)} !important; color: ${contrastText(shade(accent, 0.2))} !important; }
 html .paper-icon-button-light.show-focus:focus, html .emby-tab-button.show-focus:focus { color: ${accent} !important; }
+/* Header tabs are emby-buttons too, so the solid fill above landed under their accent text and hid it (TV top bar).
+   They focus as accent text on no background, the web client's own look. */
+html .emby-tab-button.show-focus:focus { background: transparent !important; }
+/* Live TV date tabs focus solid. After the tab rules above, which would otherwise colour their text accent too. */
+html .guide-date-tab-button.show-focus:focus { background-color: ${accent} !important; color: ${accentText} !important; }
 html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color: ${accent} !important; }
 /* Controls the web client colours blue directly (no variable): toggle switches, radio buttons, list icons. */
 .mdl-switch__input:checked + .mdl-switch__label + .mdl-switch__trackContainer > .mdl-switch__track { background: ${rgba(accent, 0.5)} !important; }
@@ -643,6 +660,10 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         // Played tick and favourite heart keep their own "on" colours so their state stays readable.
         // With the solid Play button on, Play/Resume are left out here so their contrasting icon and
         // solid background aren't overridden by these (more specific) rules.
+        // The web client widens the buttons' side padding with the screen (0.7em, up to 0.85em on desktop), so a round
+        // button came out oval, a different oval on every device. Equal padding makes every button the same circle;
+        // the margin keeps the old space between icons.
+        css += `.itemDetailPage .mainDetailButtons .detailButton { padding: 0.7em !important; margin: 0 0.15em !important; border-radius: 50% !important; }\n`;
         const plain = v.FilledPlayButton ? '.detailButton:not(.btnPlay):not(.btnReplay)' : '.detailButton';
         if (v.AccentDetailButtons) css += `.itemDetailPage .mainDetailButtons ${plain} .material-icons:not(.playstatebutton-icon-played):not(.ratingbutton-icon-withrating) { color: ${accent} !important; }
 .itemDetailPage .mainDetailButtons ${plain}:hover, .itemDetailPage .mainDetailButtons ${plain}:focus { background-color: ${rgba(accent, 0.18)} !important; }
@@ -650,7 +671,10 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
 .itemDetailPage .mainDetailButtons ${plain}.show-focus:focus { background-color: ${accent} !important; }
 .itemDetailPage .mainDetailButtons ${plain}.show-focus:focus .material-icons:not(.playstatebutton-icon-played):not(.ratingbutton-icon-withrating) { color: ${accentText} !important; }\n`;
         if (v.FilledPlayButton) css += `.itemDetailPage .mainDetailButtons .btnPlay, .itemDetailPage .mainDetailButtons .btnReplay { background-color: ${accent} !important; border-radius: 50% !important; }
-.itemDetailPage .mainDetailButtons .btnPlay .material-icons, .itemDetailPage .mainDetailButtons .btnReplay .material-icons { color: ${accentText} !important; }\n`;
+.itemDetailPage .mainDetailButtons .btnPlay .material-icons, .itemDetailPage .mainDetailButtons .btnReplay .material-icons { color: ${accentText} !important; }
+/* TV focus: the button is already solid accent, so focus inverts it, or the focused Play looked unfocused. */
+.itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus { background-color: #f2f2f2 !important; }
+.itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus .material-icons, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus .material-icons { color: ${accent} !important; }\n`;
         hide(v.HideTrailerBtn, '.itemDetailPage .btnPlayTrailer');
         hide(v.HideDownloadBtn, '.itemDetailPage .btnDownload');
         hide(v.HideInstantMixBtn, '.itemDetailPage .btnInstantMix');
@@ -680,6 +704,11 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         // The library grid reserves space on the right for the picker; give it back when hidden.
         // Classic layout: .alphaPicker. Newer (MUI) layout: a toggle-button column in .alphaPicker-fixed-right.
         if (v.HideAlphaPicker) css += `.alphaPicker, .alphaPicker-fixed-right { display: none !important; }\n.padded-right-withalphapicker { padding-right: 3.3% !important; }\n`;
+        // A picked letter stays as a saved filter, so with the picker hidden a library showed only that letter's titles
+        // with no way to see why or undo it. Bring the picker back while a letter is picked (clicking it again clears it).
+        // Own rules: TVs without :has() drop them and keep the picker hidden, as before.
+        if (v.HideAlphaPicker) css += `.alphaPicker-fixed-right:has(.MuiToggleButton-root.Mui-selected) { display: block !important; }
+.alphaPicker:has(.alphaPickerButton-selected) { display: flex !important; }\n`;
         if (v.HideRatings) css += `.starRatingContainer, .mediaInfoCriticRating { display: none !important; }\n`;
         // Player timeline, volume and other sliders (emby-slider renders as .mdl-slider). Thumb pseudo-elements
         // get their own rules: one unknown vendor pseudo in a selector list would drop the whole rule.
@@ -717,8 +746,9 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         hide(v.HideHeaderSyncPlay, '.headerSyncButton');
         hide(v.HideHeaderSyncPlay, '.MuiAppBar-root .MuiIconButton-root:has([data-testid="GroupsIcon"])');
         // Transparent until scrolled: editor.js sets html.tb-scrolled. TV layout is left alone (no mouse,
-        // and TV apps don't run editor.js, so it would never turn solid).
-        if (v.HeaderTransparentTop) css += `html:not(.tb-scrolled):not(.layout-tv) :is(.skinHeader, .MuiAppBar-root) { background-color: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: none !important; }
+        // and TV apps don't run editor.js, so it would never turn solid). Only while editor.js runs (html.tb-js):
+        // the theme also arrives through Custom CSS, and without the script the bar stayed clear on every scroll.
+        if (v.HeaderTransparentTop) css += `html.tb-js:not(.tb-scrolled):not(.layout-tv) :is(.skinHeader, .MuiAppBar-root) { background-color: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: none !important; }
 :is(.skinHeader, .MuiAppBar-root) { transition: background-color 0.25s ease, backdrop-filter 0.25s ease; }\n`;
 
         // Home screen rows. Rows are only numbered (section0, section1…), so the library row is found by content.
@@ -738,7 +768,9 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         // Profile icon: only the default letter/person avatar, not a user picture.
         if (v.AccentProfileIcon) css += `.MuiAppBar-root .MuiAvatar-colorDefault { background-color: ${accent} !important; color: ${accentText} !important; }
 /* Classic header (TV apps): .headerUserButtonRound means the user has a picture; without one it's a person icon. */
-.skinHeader .headerUserButton:not(.headerUserButtonRound) { background-color: ${accent} !important; color: ${accentText} !important; border-radius: 999px !important; }\n`;
+.skinHeader .headerUserButton:not(.headerUserButtonRound) { background-color: ${accent} !important; color: ${accentText} !important; border-radius: 999px !important; }
+/* Remote focus colours icon buttons accent, which hid the icon on its accent circle: invert it instead. */
+.skinHeader .headerUserButton.show-focus:not(.headerUserButtonRound):focus { background-color: #f2f2f2 !important; color: ${accent} !important; }\n`;
         // Loading spinner: classic (mdl-spinner layers) and newer (MUI CircularProgress).
         if (v.AccentSpinner) css += `.mdl-spinner__layer, .progressring-spiner { border-color: ${accent} !important; }\n.MuiCircularProgress-root { color: ${accent} !important; }\n`;
 
@@ -2366,6 +2398,8 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
     // scrollers: horizontal card rows (scrollHeight == clientHeight) and our own panel are ignored.
     function watchScroll() {
         const root = document.documentElement;
+        // Tells the CSS the scroll watcher runs, so the transparent top bar can rely on tb-scrolled.
+        root.classList.add('tb-js');
         const update = (target) => {
             const t = target && target !== document && target.scrollHeight !== undefined ? target : document.scrollingElement;
             if (!t || (t.closest && t.closest('#tb-live-panel'))) return;
