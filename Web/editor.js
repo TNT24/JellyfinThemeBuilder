@@ -12,7 +12,7 @@
         { id: 'BackgroundColor', label: 'Page Background', type: 'color', default: '#101010' },
         { id: 'SurfaceColor', label: 'Menus & Dialogs', type: 'color', default: '#202020' },
         { id: 'EnableOledBlack', label: 'Force True OLED Black', type: 'checkbox', default: false },
-        { id: 'AutoAccentFromBackdrop', label: 'Match Accent to Each Title\'s Artwork (details pages, browsers only)', type: 'checkbox', default: false },
+        { id: 'AutoAccentFromBackdrop', label: 'Match Accent to Each Title\'s Artwork (details pages)', type: 'checkbox', default: false },
         { id: 'AccentSpinner', label: 'Accent-Coloured Loading Spinner', type: 'checkbox', default: true },
         { id: 'GlassMenus', label: 'Frosted Glass Menus & Dialogs', type: 'checkbox', default: false },
         { id: 'GlassOpacity', label: 'Glass Opacity', type: 'range', min: '0.3', max: '1', step: '0.05', default: '0.7' },
@@ -40,7 +40,7 @@
         { id: 'HeaderColor', label: 'Top Navigation Bar Colour', type: 'color', default: '#000000' },
         { id: 'HeaderOpacity', label: 'Top Bar Opacity', type: 'range', min: '0', max: '1', step: '0.05', default: '0.8' },
         { id: 'HeaderBlur', label: 'Header Blur (px)', type: 'range', min: '0', max: '30', step: '1', default: '15' },
-        { id: 'HeaderTransparentTop', label: 'Transparent Top Bar Until You Scroll (browsers only)', type: 'checkbox', default: false },
+        { id: 'HeaderTransparentTop', label: 'Transparent Top Bar Until You Scroll', type: 'checkbox', default: false },
         { id: 'TopBarLayout', label: 'Top Bar Layout', type: 'select', default: 'default', options: [['default', 'Logo and tabs on the left'], ['centered', 'Logo and tabs centred (Apple TV+)']] },
         { id: 'HeaderButtonPadding', label: 'Extra Side Padding: Icon Buttons (em)', type: 'range', min: '0', max: '1.5', step: '0.1', default: '0' },
         { id: 'HeaderTabPadding', label: 'Extra Side Padding: Library Tabs (em)', type: 'range', min: '0', max: '2', step: '0.1', default: '0' },
@@ -56,7 +56,7 @@
         { id: 'HomeTitleAlign', label: 'Row Title Alignment', type: 'select', default: 'left', options: [['left', 'Left'], ['center', 'Centred']] },
         { id: 'HomeTitleIndent', label: 'Extra Row Title Indent (em)', type: 'range', min: '0', max: '3', step: '0.25', default: '0' },
         { id: 'HomeRowSpacing', label: 'Extra Space Between Rows (em)', type: 'range', min: '0', max: '4', step: '0.25', default: '0' },
-        { id: 'HideMyMediaRow', label: 'Hide "My Media" Library Row (browsers and TVs from 2023 on)', type: 'checkbox', default: false },
+        { id: 'HideMyMediaRow', label: 'Hide "My Media" Library Row', type: 'checkbox', default: false },
         { id: 'HideMyMediaTitles', label: 'Hide Titles Under "My Media" Tiles', type: 'checkbox', default: false },
         { id: 'HideRowSeeAll', label: 'Hide Row Title Arrows (›)', type: 'checkbox', default: false },
 
@@ -112,7 +112,7 @@
         { id: 'RibbonOpacity', label: 'Title Ribbon Background Opacity (uses Menus colour)', type: 'range', min: '0', max: '1', step: '0.05', default: '0.8' },
         { id: 'DetailTitleScale', label: 'Title Size (%)', type: 'range', min: '60', max: '140', step: '5', default: '100' },
         { id: 'HideDetailPoster', label: 'Hide Poster', type: 'checkbox', default: false },
-        { id: 'DetailPosterSide', label: 'Poster Side (desktop & TV)', type: 'select', default: 'left', options: [['left', 'Left'], ['right', 'Right']] },
+        { id: 'DetailPosterSide', label: 'Poster Side', type: 'select', default: 'left', options: [['left', 'Left'], ['right', 'Right']] },
         { id: 'DetailAlign', label: 'Title, Info & Buttons Alignment', type: 'select', default: 'left', options: [['left', 'Left (Netflix)'], ['center', 'Centred, logo on top (Apple TV+)']] },
         { id: 'HideDetailLogo', label: 'Hide Title Logo Image', type: 'checkbox', default: false },
 
@@ -171,7 +171,7 @@
         { id: 'LoginWelcomeText', label: 'Welcome Text', type: 'text', default: '' },
         { id: 'HideForgotPassword', label: 'Hide "Forgot Password" Button', type: 'checkbox', default: false },
 
-        { section: 'Night Mode (browsers only)' },
+        { section: 'Night Mode' },
         { id: 'NightMode', label: 'Dim the App at Night', type: 'checkbox', default: false },
         { id: 'NightStart', label: 'Night Starts (hour, 24h)', type: 'range', min: '0', max: '23', step: '1', default: '22' },
         { id: 'NightEnd', label: 'Night Ends (hour, 24h)', type: 'range', min: '0', max: '23', step: '1', default: '7' },
@@ -179,8 +179,80 @@
         { id: 'NightOled', label: 'Use True Black at Night', type: 'checkbox', default: true },
 
         { section: 'User Themes' },
-        { id: 'AllowUserThemes', label: 'Let Every User Pick a Personal Theme (adds "My Theme" to their menu; TV apps use the server theme)', type: 'checkbox', default: false }
+        { id: 'AllowUserThemes', label: 'Let Every User Pick a Personal Theme (adds "My Theme" to their menu)', type: 'checkbox', default: false }
     ];
+
+    // Options that only do something while another option is set. The editor greys them out (they stay editable,
+    // so they can be set up first) with the hint. [is it in effect?, what has to be set]
+    const optLabel = (id) => '"' + fields.find(f => f.id === id).label.replace(/ \(.*\)$/, '') + '"';
+    const needsOn = (id) => [v => !!v[id], `Takes effect with ${optLabel(id)} on.`];
+    const needsOff = (id) => [v => !v[id], `Has no effect while ${optLabel(id)} is on.`];
+    const DEPENDS = {
+        GlassOpacity: needsOn('GlassMenus'),
+        AppBackgroundDim: [v => !!String(v.AppBackgroundUrl || '').trim(), `Takes effect once ${optLabel('AppBackgroundUrl')} is set.`],
+        BgGradientColor1: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`],
+        BgGradientColor2: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`],
+        BgGradientStrength: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`],
+        BgGradientAngle: [v => v.BgGradient === 'linear', `Only for the Linear ${optLabel('BgGradient')}.`],
+        BgGradientPosition: [v => v.BgGradient === 'radial', `Only for the Radial glow ${optLabel('BgGradient')}.`],
+        TvPlainBackground: [v => !!String(v.AppBackgroundUrl || '').trim() || v.AppAccentGlow || v.BgGradient !== 'off', 'Takes effect with a background image, accent glow or gradient set.'],
+        HeaderBlur: [v => Number(v.HeaderOpacity) < 1, `Only shows while ${optLabel('HeaderOpacity')} is below 1.`],
+        HeaderLogoHeight: [v => !!String(v.HeaderLogoUrl || '').trim(), `Takes effect once ${optLabel('HeaderLogoUrl')} is set.`],
+        HideMyMediaTitles: needsOff('HideMyMediaRow'),
+        WideTileRadius: needsOn('SeparateWideRadius'),
+        CardBorderColor: [v => Number(v.CardBorderWidth) > 0, `Takes effect with ${optLabel('CardBorderWidth')} above 0.`],
+        CardBorderOpacity: [v => Number(v.CardBorderWidth) > 0, `Takes effect with ${optLabel('CardBorderWidth')} above 0.`],
+        GlowSize: needsOn('EnableHoverGlow'),
+        CardTitlePosition: needsOff('HideCardTitles'),
+        CardTitleLines: needsOff('HideCardTitles'),
+        CardTitleAlign: needsOff('HideCardTitles'),
+        CardTitleBold: needsOff('HideCardTitles'),
+        WatchedIndicatorColor: needsOff('LinkWatchedToAccent'),
+        BadgeTextColor: needsOff('AutoBadgeText'),
+        DetailPosterSide: needsOff('HideDetailPoster'),
+        NextUpLayout: needsOff('HideNextUp'),
+        LoginBackgroundBlur: [v => !!String(v.LoginBackgroundUrl || '').trim(), `Takes effect once the login ${optLabel('LoginBackgroundUrl')} is set.`],
+        NightStart: needsOn('NightMode'),
+        NightEnd: needsOn('NightMode'),
+        NightDim: needsOn('NightMode'),
+        NightOled: needsOn('NightMode')
+    };
+
+    // Where each option takes effect, when that isn't everywhere. Browsers and the phone apps run editor.js; TV apps
+    // (Tizen, webOS) only get the Custom CSS copy: no script, no hover, no blur, and the classic layout.
+    const DEVICE_NAMES = { browser: 'browsers', phone: 'phones', tv: 'TV apps' };
+    const DEVICES = {
+        AutoAccentFromBackdrop: ['browser', 'phone'],
+        GlassMenus: ['browser', 'phone'],
+        GlassOpacity: ['browser', 'phone'],
+        HeaderBlur: ['browser', 'phone'],
+        HeaderTransparentTop: ['browser', 'phone'],
+        EnableSlimScrollbars: ['browser'],
+        EnableHoverZoom: ['browser'],
+        EnableHoverGlow: ['browser', 'tv'],
+        GlowSize: ['browser', 'tv'],
+        HideCardOverlayButtons: ['browser', 'phone'],
+        RibbonOpacity: ['browser', 'phone'],
+        DetailPosterSide: ['browser', 'tv'],
+        HideAudioLanguages: ['browser', 'phone'],
+        HideLanguageFlags: ['browser', 'phone'],
+        TvPlainBackground: ['tv'],
+        NightMode: ['browser', 'phone'],
+        NightStart: ['browser', 'phone'],
+        NightEnd: ['browser', 'phone'],
+        NightDim: ['browser', 'phone'],
+        NightOled: ['browser', 'phone'],
+        AllowUserThemes: ['browser', 'phone']
+    };
+    // Extra notes for the device badge's tooltip.
+    const DEVICE_NOTES = {
+        HideMyMediaRow: 'On TV, only on models from 2023 on (older TV browsers lack :has()).',
+        EnableHoverGlow: 'TVs have no mouse, so it shows as a ring on the focused card.',
+        GlowSize: 'TVs have no mouse, so it shows as a ring on the focused card.',
+        DetailPosterSide: 'Phones always show the poster above the text.',
+        AllowUserThemes: 'TV apps always use the server theme.'
+    };
+    const devicesOf = (id) => DEVICES[id] || ['browser', 'phone', 'tv'];
 
     // Saving plugin configuration needs an administrator, so the editor is only offered to admins.
     let isAdmin = false;
@@ -1175,6 +1247,268 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
         else parent.appendChild(tag);
     }
 
+    // ---- TV remote-focus preview ----
+    // The TV apps' web client (10.10) styles remote focus itself; the theme's rules land on top of those. The preview
+    // strip shows real web client buttons styled by both, with :focus turned into a class so several can look focused
+    // at once. Only the TV client's own defaults below are hand-copied (from its theme.css, emby-button and emby-tabs).
+    const TV_CLIENT_CSS = `
+.emby-button { color: inherit; border-radius: 0.2em; padding: 0.9em 1em; font-weight: 600; }
+.button-flat { background: transparent; }
+.emby-tab-button { background: transparent; color: #999; padding: 1em 1.2em; border-radius: 0; font-weight: 600; }
+.emby-tab-button-active { color: #fff; }
+.paper-icon-button-light { background: transparent; color: inherit; border-radius: 50%; padding: 0.556em; display: inline-flex; }
+.raised { background: #303030; color: rgba(255,255,255,0.87); }
+.button-submit { background: #00a4dc; color: #fff; }
+.raised:focus { background: #383838; }
+.button-submit:focus { background: #0cb0e8; color: #fff; }
+.emby-button.show-focus:focus { background: #00a4dc; color: #fff; }
+.emby-tab-button.show-focus:focus { color: #00a4dc; background: 0 !important; }
+.paper-icon-button-light.show-focus:focus { color: #00a4dc; }
+.detailButton { display: inline-flex; flex-direction: column; justify-content: center; align-items: center; margin: 0 !important; padding: 0.7em 0.85em !important; }
+`;
+
+    // Splits a selector list at top-level commas (not the ones inside :is(…) / :not(…)).
+    function splitSelectors(text) {
+        const out = [];
+        let depth = 0, start = 0;
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (c === '(') depth++;
+            else if (c === ')') depth--;
+            else if (c === ',' && depth === 0) { out.push(text.slice(start, i).trim()); start = i + 1; }
+        }
+        out.push(text.slice(start).trim());
+        return out.filter(Boolean);
+    }
+
+    // The rules of `css` that style the preview strip's buttons, re-aimed at it: :focus becomes .tb-pf, the TV
+    // header, tab strip and details page classes get stand-ins (the real ones carry page layout), and everything is scoped to
+    // the strip. Rules for desktop only (hover, keyboard, not-TV) are left out, as TVs never use them.
+    function tvFocusCss(css) {
+        const sheet = new CSSStyleSheet();
+        try { sheet.replaceSync(css.replace(/@import[^;]*;/g, '')); } catch (e) { return ''; }
+        const wanted = /emby-tab-button|headerUserButton|detailButton|btnPlay|btnReplay|button-submit|paper-icon-button-light|emby-button|\.raised|button-flat/;
+        const desktopOnly = /:not\(\.layout-tv\)|:hover|:focus-visible|:focus-within|:active|::-webkit|::-moz|Mui/;
+        let out = '';
+        for (const r of sheet.cssRules) {
+            if (!r.selectorText) continue;      // @media (hover: hover) and the like: not on TV
+            const sels = splitSelectors(r.selectorText)
+                .filter(s => wanted.test(s) && !desktopOnly.test(s))
+                .map(s => s.replace(/^html(\.layout-tv)?\s+/, '').replace(/^\.layout-tv\s+/, '')
+                    .replace(/:focus(?![-\w])/g, '.tb-pf').replace(/\.skinHeader\b/g, '.tb-pf-skin').replace(/\.itemDetailPage\b/g, '.tb-pf-detail').replace(/\.headerTabs\b/g, '.tb-pf-tabs'))
+                .filter(s => !/^(html|:root|body)\b/.test(s))
+                .map(s => '#tb_pv_tvfocus ' + s);
+            if (sels.length) out += `${sels.join(', ')} { ${r.style.cssText} }\n`;
+        }
+        return out;
+    }
+
+    function updateTvFocusPreview(v, css) {
+        const strip = document.getElementById('tb_pv_tvfocus');
+        if (!strip) return;
+        strip.style.display = previewMode === 'tv' ? '' : 'none';
+        if (previewMode !== 'tv') return;
+        let tag = document.getElementById('tb-pf-styles');
+        if (!tag) { tag = document.createElement('style'); tag.id = 'tb-pf-styles'; document.head.appendChild(tag); }
+        // TVs scale focused buttons up by 20–30%; a little is enough to show it here without overlapping.
+        tag.textContent = tvFocusCss(TV_CLIENT_CSS) + tvFocusCss(css || buildCss(v))
+            + '#tb_pv_tvfocus .tb-pf { transform: scale(1.08); position: relative; z-index: 1; }\n';
+        strip.style.background = v.EnableOledBlack ? '#000000' : (v.BackgroundColor || '#101010');
+    }
+
+    // ---- Click the page to find its options ----
+    // Which options style an element: for each option, build the theme with that option changed and see which rules
+    // appear; the options whose new rules match the element (or a few of its ancestors) style it.
+    let pickIndex = null, pickIndexKey = '';
+
+    function altValue(f, cur) {
+        if (f.type === 'checkbox') return !(cur === true || cur === 'true');
+        if (f.type === 'range') return String(cur) === String(f.max) ? f.min : f.max;
+        if (f.type === 'select') return (f.options.find(o => o[0] !== cur) || f.options[0])[0];
+        if (f.type === 'color') return String(cur).toLowerCase() === '#123457' ? '#765432' : '#123457';
+        return /Url$/.test(f.id) ? 'https://example.invalid/tb-pick.png' : 'Tb Pick';
+    }
+
+    function ruleTexts(css) {
+        const set = new Set();
+        const sheet = new CSSStyleSheet();
+        try { sheet.replaceSync(css.replace(/@import[^;]*;/g, '')); } catch (e) { return set; }
+        const walk = (list) => { for (const r of list) { if (r.selectorText) set.add(r.cssText); else if (r.cssRules) walk(r.cssRules); } };
+        walk(sheet.cssRules);
+        return set;
+    }
+
+    function buildPickIndex(v) {
+        const key = JSON.stringify(v);
+        if (pickIndex && key === pickIndexKey) return pickIndex;
+        // Everything switched on, as a second baseline: options that only matter with another one on (glow size,
+        // gradient colours…) show up there.
+        const allOn = Object.assign({}, v);
+        fields.forEach(f => { if (f.type === 'checkbox' && /^(Enable|Accent|Separate|Glass|Night|App|Filled)/.test(f.id)) allOn[f.id] = true; });
+        allOn.BgGradient = v.BgGradient === 'off' ? 'linear' : v.BgGradient;
+        if (!(Number(allOn.CardBorderWidth) > 0)) allOn.CardBorderWidth = '2';
+        const bases = [[v, ruleTexts(buildCss(v))], [allOn, ruleTexts(buildCss(allOn))]];
+        const index = {};
+        fields.forEach(f => {
+            if (f.section) return;
+            const sels = new Set();
+            for (const [base, rules] of bases) {
+                const variant = Object.assign({}, base, { [f.id]: altValue(f, base[f.id]) });
+                const changed = ruleTexts(buildCss(variant));
+                // Both ways: rules the change adds, and rules it takes away (an option that's on by default).
+                const add = (t) => splitSelectors(t.slice(0, t.indexOf('{'))).forEach(s => sels.add(s));
+                changed.forEach(t => { if (!rules.has(t)) add(t); });
+                rules.forEach(t => { if (!changed.has(t)) add(t); });
+                if (sels.size) break;
+            }
+            // The selector as it applies to an element at rest: state pseudo-classes and pseudo-elements removed.
+            index[f.id] = [...sels].map(s => s.replace(/::?(before|after|selection|placeholder|cue|-webkit-[\w-]+|-moz-[\w-]+)\b/g, '')
+                .replace(/:(hover|focus-visible|focus-within|focus|active)\b/g, '').trim())
+                .filter(s => s && !/^(html|:root|body|\*)$/.test(s));
+        });
+        pickIndex = index; pickIndexKey = key;
+        return index;
+    }
+
+    // Rough CSS specificity: ids, then classes / attributes / pseudo-classes, then element names.
+    function specificity(sel) {
+        const s = sel.replace(/:not\(|:is\(|:has\(|\)/g, ' ');
+        const ids = (s.match(/#[\w-]+/g) || []).length;
+        const classes = (s.match(/\.[\w-]+|\[[^\]]+\]|:[\w-]+/g) || []).length;
+        const types = (s.replace(/#[\w-]+|\.[\w-]+|\[[^\]]+\]|:[\w-]+/g, ' ').match(/[a-z][\w-]*/gi) || []).length;
+        return ids * 100 + classes * 10 + types;
+    }
+
+    // Options that style `target`, most specific first: [{ f, depth, general }]. Options that restyle the whole app
+    // (the font, OLED black, the page colour…) match almost anything, so they go last, marked general.
+    function optionsFor(target, v) {
+        const index = buildPickIndex(v);
+        const chain = [];
+        for (let n = target, d = 0; n && n !== document.body && n !== document.documentElement && d < 8; n = n.parentElement, d++) chain.push(n);
+        const found = [];
+        fields.forEach(f => {
+            if (f.section || !index[f.id]) return;
+            let best = null;
+            for (let d = 0; d < chain.length && !best; d++) {
+                for (const s of index[f.id]) {
+                    let hit = false;
+                    try { hit = chain[d].matches(s); } catch (e) { /* selector this browser can't test */ }
+                    if (hit && (!best || specificity(s) > best.spec)) best = { depth: d, spec: specificity(s) };
+                }
+            }
+            if (!best) return;
+            // General: the option has a great many rules, or matched only through a bare element name (h1, button).
+            const general = index[f.id].length > 25 || best.spec < 10;
+            found.push({ f, depth: best.depth, spec: best.spec, general });
+        });
+        return found.sort((a, b) => (a.general - b.general) || a.depth - b.depth || b.spec - a.spec || fields.indexOf(a.f) - fields.indexOf(b.f));
+    }
+
+    // Scrolls the options list to an option and flashes it (clearing the search and "Changed only" filters).
+    function revealField(id) {
+        const search = document.getElementById('tb_search'), changedOnly = document.getElementById('tb_changed_only');
+        if (search.value) search.value = '';
+        if (changedOnly.checked) changedOnly.checked = false;
+        applyFilter();
+        const row = document.querySelector(`#tb-live-panel .tb-field[data-id="${id}"]`);
+        if (!row) return;
+        const sec = row.closest('.tb-section');
+        if (sec && sec.classList.contains('tb-collapsed')) sec.querySelector('.tb-sec-toggle').click();
+        row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        row.classList.remove('tb-flash'); void row.offsetWidth; row.classList.add('tb-flash');
+        const input = el(id);
+        if (input) setTimeout(() => input.focus({ preventScroll: true }), 350);
+    }
+
+    function startPicking() {
+        const panel = document.getElementById('tb-live-panel');
+        let outline = document.getElementById('tb-pick-outline');
+        if (!outline) { outline = document.createElement('div'); outline.id = 'tb-pick-outline'; document.body.appendChild(outline); }
+        outline.style.setProperty('--tb-pick', readValues().AccentColor || '#00a4dc');
+        // The panel fades and lets the pointer through, so anything on the page can be picked, even behind it.
+        panel.style.opacity = '0.12';
+        panel.style.pointerEvents = 'none';
+        document.documentElement.classList.add('tb-picking');
+        // Its own banner: the panel's toast fades with the panel.
+        let banner = document.getElementById('tb-pick-hint');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'tb-pick-hint';
+            banner.style.cssText = 'position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 100000; background: #1b1b1b; color: #eee; padding: 10px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 6px 24px rgba(0,0,0,0.6); font-family: sans-serif; font-size: 14px; pointer-events: none;';
+            document.body.appendChild(banner);
+        }
+        banner.textContent = 'Click anything on the page to find the options that style it. Esc cancels.';
+        banner.style.display = '';
+        const at = (e) => { const t = document.elementFromPoint(e.clientX, e.clientY); return t && t !== outline ? t : null; };
+        const move = (e) => {
+            const t = at(e);
+            if (!t || t === document.body || t === document.documentElement) { outline.style.display = 'none'; return; }
+            const r = t.getBoundingClientRect();
+            Object.assign(outline.style, { display: 'block', left: r.left - 2 + 'px', top: r.top - 2 + 'px', width: r.width + 4 + 'px', height: r.height + 4 + 'px' });
+        };
+        const stop = () => {
+            document.removeEventListener('mousemove', move, true);
+            document.removeEventListener('click', click, true);
+            document.removeEventListener('keydown', key, true);
+            outline.style.display = 'none';
+            banner.style.display = 'none';
+            panel.style.opacity = '';
+            panel.style.pointerEvents = '';
+            document.documentElement.classList.remove('tb-picking');
+        };
+        const click = (e) => {
+            // The page mustn't act on this click (follow a link, play something).
+            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+            const t = at(e);
+            stop();
+            if (t) showPickResults(t);
+        };
+        const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); stop(); } };
+        document.addEventListener('mousemove', move, true);
+        document.addEventListener('click', click, true);
+        document.addEventListener('keydown', key, true);
+    }
+
+    function showPickResults(target) {
+        const box = document.getElementById('tb_pick'), list = document.getElementById('tb_pick_list');
+        const what = target.getAttribute('aria-label') || target.getAttribute('title') || (target.textContent || '').trim().slice(0, 40)
+            || target.tagName.toLowerCase();
+        document.getElementById('tb_pick_what').textContent = 'You clicked: ' + what;
+        box.style.display = 'flex';
+        list.textContent = 'Looking…';
+        // Let "Looking…" paint: building the index takes a moment the first time.
+        setTimeout(() => {
+            const all = optionsFor(target, readValues());
+            const specific = all.filter(x => !x.general).slice(0, 12), general = all.filter(x => x.general);
+            const sections = fields.filter(f => f.section);
+            const item = ({ f }) => `<button type="button" class="tb-pick-item" data-id="${f.id}">${f.label}<small>${sections[f._sec] ? sections[f._sec].section : ''}</small></button>`;
+            list.innerHTML = all.length
+                ? specific.map(item).join('')
+                    + (general.length ? `<div style="color: #888; font-size: 0.85em; margin: 12px 0 6px;">${specific.length ? 'Also affects it, along with the whole app:' : 'Only options that change the whole app affect this:'}</div>` + general.map(item).join('') : '')
+                : '<div style="color: #999;">No theme options style this. Try clicking the element around it, or a similar one elsewhere.</div>';
+            list.querySelectorAll('.tb-pick-item').forEach(b => b.addEventListener('click', () => { box.style.display = 'none'; revealField(b.getAttribute('data-id')); }));
+            const first = list.querySelector('.tb-pick-item');
+            if (first) first.focus();
+        }, 30);
+    }
+
+    // Greys out options that do nothing with the current settings (DEPENDS), or on the device being previewed
+    // (DEVICES), each with a hint saying why. They stay editable, so they can be set up first.
+    function updateInactive(v) {
+        const device = previewMode === 'desktop' ? 'browser' : previewMode;
+        fields.forEach(f => {
+            if (f.section) return;
+            const row = document.querySelector(`#tb-live-panel .tb-field[data-id="${f.id}"]`);
+            const hint = document.getElementById('tb_hint_' + f.id);
+            if (!row || !hint) return;
+            const dep = DEPENDS[f.id];
+            let why = dep && !dep[0](v) ? dep[1] : '';
+            if (!why && devicesOf(f.id).indexOf(device) === -1) why = `Not used on ${DEVICE_NAMES[device]} (you're previewing ${previewMode === 'desktop' ? 'desktop' : DEVICE_NAMES[device]}).`;
+            row.classList.toggle('tb-inactive', !!why);
+            if (hint.textContent !== why) hint.textContent = why;
+        });
+    }
+
     function applyLive() {
         const v = readValues();
 
@@ -1187,13 +1521,8 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
         styleTag.textContent = buildCss(v);
         updatePreview(v);
 
-        // Grey out colour pickers that an "automatic"/"linked" checkbox currently overrides.
-        const setDisabled = (id, disabled) => {
-            document.getElementById('tb_wrap_' + id).style.opacity = disabled ? '0.3' : '1';
-            el(id).style.pointerEvents = disabled ? 'none' : 'auto';
-        };
-        setDisabled('WatchedIndicatorColor', v.LinkWatchedToAccent);
-        setDisabled('BadgeTextColor', v.AutoBadgeText);
+        updateInactive(v);
+        updateTvFocusPreview(v, styleTag.textContent);
 
         // Hex boxes follow their pickers (unless being typed in).
         document.querySelectorAll('#tb-live-panel .tb-hex').forEach(box => {
@@ -1488,6 +1817,20 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
     }
 
     function buildPanel() {
+        // Device badge after an option's label, for options that don't take effect everywhere (see DEVICES).
+        const devSvg = {
+            browser: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>',
+            phone: '<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/>',
+            tv: '<rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="m8 2.5 4 3.5 4-3.5"/>'
+        };
+        const badge = (f) => {
+            const d = devicesOf(f.id), missing = ['browser', 'phone', 'tv'].filter(x => d.indexOf(x) === -1);
+            if (!missing.length && !DEVICE_NOTES[f.id]) return '';
+            const tip = ('Takes effect on ' + d.map(x => DEVICE_NAMES[x]).join(' and ')
+                + (missing.length ? ', not on ' + missing.map(x => DEVICE_NAMES[x]).join(' or ') : '') + '.'
+                + (DEVICE_NOTES[f.id] ? ' ' + DEVICE_NOTES[f.id] : '')).replace(/"/g, '&quot;');
+            return `<span class="tb-dev" title="${tip}" aria-label="${tip}">${d.map(x => `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${devSvg[x]}</svg>`).join('')}${DEVICE_NOTES[f.id] && !missing.length ? '<span>*</span>' : ''}</span>`;
+        };
         // Each section is its own block (searchable, with its own Reset); each option is a .tb-field.
         let inputsHtml = '';
         let sec = -1;
@@ -1508,18 +1851,18 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
             if (f.type === 'checkbox') {
                 inputsHtml += `<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; color: #ccc;">
                                 <input type="checkbox" id="tb_${f.id}" style="width: 18px; height: 18px;" />
-                                <span>${f.label}</span>
+                                <span>${f.label}${badge(f)}</span>
                              </label>`;
             } else if (f.type === 'select') {
                 inputsHtml += `<div style="margin-bottom: 15px;">
-                                <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}</label>
+                                <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}${badge(f)}</label>
                                 <select id="tb_${f.id}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #1c1c1c; color: #fff;">
                                     ${f.options.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('')}
                                 </select>
                              </div>`;
             } else if (f.type === 'color') {
                 inputsHtml += `<div style="margin-bottom: 15px;" id="tb_wrap_${f.id}">
-                                <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}</label>
+                                <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}${badge(f)}</label>
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                     <input type="color" id="tb_${f.id}" style="flex: 1; min-width: 0; height: 45px; border: none; border-radius: 6px; cursor: pointer; background: none;" />
                                     <input type="text" class="tb-hex" data-for="${f.id}" maxlength="7" spellcheck="false" title="Hex colour, e.g. #e50914" style="width: 90px; padding: 11px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.4); color: #fff; font-family: monospace;" />
@@ -1531,16 +1874,16 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                              </div>`;
             } else if (f.type === 'range') {
                 inputsHtml += `<div style="margin-bottom: 15px;">
-                                <label style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.95em; color: #aaa;"><span>${f.label}</span><span id="tb_val_${f.id}" style="color: #fff;"></span></label>
+                                <label style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.95em; color: #aaa;"><span>${f.label}${badge(f)}</span><span id="tb_val_${f.id}" style="color: #fff;"></span></label>
                                 <input type="range" id="tb_${f.id}" min="${f.min}" max="${f.max}" step="${f.step}" style="width: 100%;" />
                              </div>`;
             } else {
                 inputsHtml += `<div style="margin-bottom: 15px;">
-                                <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}</label>
+                                <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}${badge(f)}</label>
                                 <input type="text" id="tb_${f.id}" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.4); color: #fff; box-sizing: border-box;" />
                              </div>`;
             }
-            inputsHtml += '</div>';
+            inputsHtml += `<div class="tb-hint" id="tb_hint_${f.id}"></div></div>`;
         });
         if (sec >= 0) inputsHtml += '</div>';
         inputsHtml += '<div id="tb_no_results" style="display: none; color: #888; margin-top: 30px;">No options match your search.</div>';
@@ -1558,6 +1901,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
             desktop: svg('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>'),
             phone: svg('<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>'),
             tv: svg('<rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="m8 2.5 4 3.5 4-3.5"/>'),
+            pick: svg('<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'),
             eye: svg('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
             eyeOff: svg('<path d="M9.9 5.2A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3 3.9M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/>')
         };
@@ -1583,6 +1927,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                         <span>Changed only</span>
                         <span id="tb_changed_count" class="tb-count"></span>
                     </label>
+                    <button id="tb_pick_btn" type="button" class="tb-icon-btn tb-icon-btn-solo" title="Find options: click something on the page" aria-label="Find options by clicking something on the page">${ICON.pick}</button>
                     <div class="tb-more">
                         <button id="tb_more_btn" type="button" class="tb-icon-btn tb-icon-btn-solo" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false">${ICON.more}</button>
                         <div id="tb_more_menu" class="tb-menu" role="menu">
@@ -1618,6 +1963,17 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                     <div style="display: flex; gap: 10px; justify-content: flex-end;">
                         <button id="tb_confirm_keep" type="button" class="tb-tool-btn">Keep editing</button>
                         <button id="tb_confirm_discard" type="button" class="tb-tool-btn" style="background: #a33; color: #fff;">Discard</button>
+                    </div>
+                </div>
+            </div>
+            <div id="tb_pick" class="tb-modal" style="display: none;">
+                <div class="tb-modal-box" style="max-width: 460px;">
+                    <h3 style="margin: 0 0 4px 0; color: #fff; font-weight: 500;">Options that style this</h3>
+                    <div id="tb_pick_what" style="color: #999; font-size: 0.9em; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                    <div id="tb_pick_list" style="max-height: 50vh; overflow-y: auto;"></div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px;">
+                        <button id="tb_pick_again" type="button" class="tb-tool-btn">Pick something else</button>
+                        <button id="tb_pick_close" type="button" class="tb-tool-btn">Close</button>
                     </div>
                 </div>
             </div>
@@ -1716,6 +2072,31 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                     </div>
                     <div id="tb_pv_login" style="height: 36px; background-size: cover; background-position: center; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: flex-end; padding: 3px 8px; box-sizing: border-box; font-size: 0.8em; text-shadow: 0 1px 2px #000;">Login page</div>
                 </div>
+                <div id="tb_pv_tvfocus" style="display: none;" title="Real web client buttons, styled the way the TV apps style remote focus">
+                    <div style="font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.08em; color: #888;">Remote focus, as Tizen / webOS show it</div>
+                    <div class="tb-pf-row tb-pf-skin">
+                        <span class="tb-pf-tabs" style="display: flex;">
+                            <button type="button" tabindex="-1" class="emby-tab-button emby-button emby-tab-button-active show-focus">Home</button>
+                            <button type="button" tabindex="-1" class="emby-tab-button emby-button show-focus tb-pf">Movies</button>
+                        </span>
+                        <button type="button" tabindex="-1" class="headerButton headerUserButton paper-icon-button-light show-focus" aria-label="Profile"><span class="material-icons"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span></button>
+                        <button type="button" tabindex="-1" class="headerButton headerUserButton paper-icon-button-light show-focus tb-pf" aria-label="Profile (focused)"><span class="material-icons"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span></button>
+                    </div>
+                    <div class="tb-pf-row tb-pf-detail">
+                        <span class="mainDetailButtons" style="display: flex; gap: 4px; align-items: center;">
+                            <button type="button" tabindex="-1" class="button-flat btnPlay detailButton emby-button show-focus" aria-label="Play"><span class="material-icons"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span></button>
+                            <button type="button" tabindex="-1" class="button-flat btnPlay detailButton emby-button show-focus tb-pf" aria-label="Play (focused)"><span class="material-icons"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span></button>
+                            <button type="button" tabindex="-1" class="button-flat btnPlaystate detailButton emby-button show-focus" aria-label="Played"><span class="material-icons"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></button>
+                            <button type="button" tabindex="-1" class="button-flat btnPlaystate detailButton emby-button show-focus tb-pf" aria-label="Played (focused)"><span class="material-icons"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></button>
+                        </span>
+                    </div>
+                    <div class="tb-pf-row">
+                        <button type="button" tabindex="-1" class="raised button-submit emby-button show-focus">Sign In</button>
+                        <button type="button" tabindex="-1" class="raised button-submit emby-button show-focus tb-pf">Sign In</button>
+                        <button type="button" tabindex="-1" class="raised emby-button show-focus tb-pf">Cancel</button>
+                    </div>
+                    <div style="font-size: 0.78em; color: #777; margin-top: 8px;">Each pair: unfocused, then focused (slightly enlarged).</div>
+                </div>
                 <div style="font-size: 0.85em; color: #888; margin-top: 12px; line-height: 1.4;">Changes also preview live on the page behind. Close (&times;) to discard, or save to apply for everyone.</div>
             </div>`;
 
@@ -1790,6 +2171,23 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                 /* Options that differ from their default get an accent dot. */
                 #tb-live-panel .tb-field { position: relative; }
                 #tb-live-panel .tb-field.tb-changed::before { content: ''; position: absolute; left: -14px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--tb-accent, #00a4dc); }
+                #tb-live-panel .tb-dev { display: inline-flex; gap: 3px; align-items: center; margin-left: 8px; padding: 2px 6px; border-radius: 999px; background: rgba(255,255,255,0.07); color: #9aa3ad; vertical-align: middle; cursor: help; font-size: 0.8em; line-height: 1; }
+                #tb-live-panel .tb-hint { display: none; margin: -9px 0 14px 0; font-size: 0.82em; color: #8a8a8a; line-height: 1.35; }
+                #tb-live-panel .tb-field.tb-inactive > :not(.tb-hint) { opacity: 0.4; transition: opacity 0.15s; }
+                #tb-live-panel .tb-field.tb-inactive .tb-hint { display: block; }
+                /* Click-the-page picking. */
+                #tb-pick-outline { position: fixed; pointer-events: none; z-index: 99998; border: 2px solid var(--tb-pick, #00a4dc); border-radius: 3px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.25); transition: all 0.06s; display: none; }
+                html.tb-picking, html.tb-picking * { cursor: crosshair !important; }
+                #tb-live-panel .tb-pick-item { display: block; width: 100%; text-align: left; padding: 8px 10px; margin-bottom: 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: #242424; color: #eee; cursor: pointer; font-size: 0.95em; }
+                #tb-live-panel .tb-pick-item:hover, #tb-live-panel .tb-pick-item:focus-visible { border-color: var(--tb-accent, #00a4dc); outline: none; }
+                #tb-live-panel .tb-pick-item small { display: block; color: #888; margin-top: 2px; }
+                #tb-live-panel .tb-field.tb-flash { animation: tb-flash 1.6s ease; }
+                @keyframes tb-flash { 0%, 40% { background: color-mix(in srgb, var(--tb-accent, #00a4dc) 25%, transparent); } 100% { background: transparent; } }
+                /* TV remote-focus preview strip. */
+                #tb_pv_tvfocus { margin-top: 10px; padding: 10px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.15); }
+                #tb_pv_tvfocus .tb-pf-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+                #tb_pv_tvfocus button { font-family: inherit; font-size: 12px; border: 0; cursor: default; }
+                #tb_pv_tvfocus svg { width: 18px; height: 18px; display: block; }
                 #tb-live-panel .tb-modal { position: absolute; inset: 0; z-index: 6; background: rgba(0,0,0,0.75); align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
                 #tb-live-panel .tb-modal-box { width: 100%; background: #1b1b1b; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 18px; box-sizing: border-box; }
                 /* Preview device switcher: a smaller segmented control with icons. */
@@ -1912,6 +2310,9 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
             showToast('Loaded the settings from before the last save. Click Save & Reload to keep them.');
         });
 
+        document.getElementById('tb_pick_btn').addEventListener('click', startPicking);
+        document.getElementById('tb_pick_again').addEventListener('click', function () { document.getElementById('tb_pick').style.display = 'none'; startPicking(); });
+        document.getElementById('tb_pick_close').addEventListener('click', function () { document.getElementById('tb_pick').style.display = 'none'; });
         document.getElementById('tb_diag_btn').addEventListener('click', runDiagnostics);
         document.getElementById('tb_diag_rerun').addEventListener('click', runDiagnostics);
         document.getElementById('tb_diag_close').addEventListener('click', () => { document.getElementById('tb_diag').style.display = 'none'; });
@@ -2474,7 +2875,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
     // The automated test page (tests/editor-test.html) sets window.__TB_TEST__ to get at the internals
     // without starting the runtime.
     if (window.__TB_TEST__) {
-        window.__ThemeBuilderTest = { buildCss, mergeBrandingCss, BRAND_START, BRAND_END, fields, PRESETS, PRESET_GROUPS, openPanel, defaultValues, paletteFromImage, rgbToHsl, hslToHex, themeSettingsFor,
+        window.__ThemeBuilderTest = { buildCss, mergeBrandingCss, tvFocusCss, optionsFor, revealField, DEPENDS, DEVICES, BRAND_START, BRAND_END, fields, PRESETS, PRESET_GROUPS, openPanel, defaultValues, paletteFromImage, rgbToHsl, hslToHex, themeSettingsFor,
             setServerSettings: (s) => { serverSettings = Object.assign(defaultValues(), s); } };
     } else {
         // Used by the plugin's Dashboard page ("Open Theme Editor" and the status checks).

@@ -833,6 +833,64 @@
     check('phone preview narrows the preview', $('tb_pv_page').style.width === '230px');
     document.querySelector('.tb-pv-mode[data-mode="desktop"]').click();
 
+    // Greyed-out options: they say what they need, and come back when it's set.
+    const row = (id) => document.querySelector(`.tb-field[data-id="${id}"]`);
+    const setVal = (id, val) => { const e = $('tb_' + id); if (e.type === 'checkbox') e.checked = val; else e.value = val; fire(e, e.type === 'checkbox' || e.tagName === 'SELECT' ? 'change' : 'input'); };
+    setVal('EnableHoverGlow', false);
+    check('options that do nothing are greyed out with a hint', row('GlowSize').classList.contains('tb-inactive') && /Accent Glow on Hover/.test($('tb_hint_GlowSize').textContent), $('tb_hint_GlowSize').textContent);
+    setVal('EnableHoverGlow', true);
+    check('they come back when what they need is set', !row('GlowSize').classList.contains('tb-inactive') && $('tb_hint_GlowSize').textContent === '');
+    setVal('BgGradient', 'radial');
+    check('gradient angle is greyed for a radial gradient, position is not', row('BgGradientAngle').classList.contains('tb-inactive') && !row('BgGradientPosition').classList.contains('tb-inactive'));
+    check('every dependency names a real option', Object.keys(T.DEPENDS).every(id => !!row(id)) && Object.keys(T.DEVICES).every(id => !!row(id)), Object.keys(T.DEPENDS).concat(Object.keys(T.DEVICES)).filter(id => !row(id)).join(', '));
+
+    // Device badges, and options greyed out for the device being previewed.
+    check('device badge on options that don\'t work everywhere', !!row('HeaderTransparentTop').querySelector('.tb-dev') && /not on TV apps/.test(row('HeaderTransparentTop').querySelector('.tb-dev').title), row('HeaderTransparentTop').innerHTML.slice(0, 200));
+    check('no badge on options that work everywhere', !row('AccentColor').querySelector('.tb-dev') && !row('BorderRadius').querySelector('.tb-dev'));
+    check('no "(browsers only)" left in labels', !T.fields.some(f => /browsers only|desktop & TV|TVs from 2023/.test(f.label || f.section || '')));
+    setVal('EnableHoverZoom', true);
+    document.querySelector('.tb-pv-mode[data-mode="tv"]').click();
+    check('TV preview greys out options TVs don\'t use', row('EnableHoverZoom').classList.contains('tb-inactive') && /TV apps/.test($('tb_hint_EnableHoverZoom').textContent) && !row('AccentColor').classList.contains('tb-inactive'), $('tb_hint_EnableHoverZoom').textContent);
+
+    // TV preview: the remote-focus strip uses real button markup and the TV client's own focus rules plus the theme.
+    setVal('AccentColor', '#e50914'); setVal('AccentProfileIcon', true); setVal('FilledPlayButton', true);
+    const strip = $('tb_pv_tvfocus');
+    check('TV preview shows the remote-focus strip', strip.style.display !== 'none' && !!$('tb-pf-styles'));
+    strip.querySelectorAll('*').forEach(e => { e.style.transition = 'none'; });
+    const cs = (sel) => getComputedStyle(strip.querySelector(sel));
+    const tabF = cs('.emby-tab-button.tb-pf');
+    check('TV preview: focused tab is accent text on no fill (not accent on accent)', tabF.color === 'rgb(229, 9, 20)' && tabF.backgroundColor === 'rgba(0, 0, 0, 0)', tabF.color + ' on ' + tabF.backgroundColor);
+    const profs = strip.querySelectorAll('.headerUserButton');
+    check('TV preview: focused profile icon differs from unfocused', getComputedStyle(profs[0]).backgroundColor === 'rgb(229, 9, 20)' && getComputedStyle(profs[1]).backgroundColor !== getComputedStyle(profs[1]).color && getComputedStyle(profs[1]).backgroundColor !== 'rgb(229, 9, 20)', getComputedStyle(profs[1]).backgroundColor);
+    const plays = strip.querySelectorAll('.btnPlay');
+    check('TV preview: focused solid Play differs from unfocused', getComputedStyle(plays[0]).backgroundColor === 'rgb(229, 9, 20)' && getComputedStyle(plays[1]).backgroundColor !== 'rgb(229, 9, 20)', getComputedStyle(plays[1]).backgroundColor);
+    check('TV preview would show an accent-on-accent focus bug', /#tb_pv_tvfocus \.emby-button\.show-focus\.tb-pf/.test(T.tvFocusCss('html .emby-button.show-focus:focus { background-color: #e50914 !important; }'))
+        && T.tvFocusCss('@media (hover: hover) { .emby-button:hover { color: red; } } html:not(.layout-tv) .raised:focus { color: red; }') === '');
+    document.querySelector('.tb-pv-mode[data-mode="desktop"]').click();
+    check('TV focus strip hides outside the TV preview', strip.style.display === 'none');
+
+    // Click the page to find its options.
+    (() => {
+        const host = document.createElement('div');
+        host.innerHTML = '<div class="MuiAppBar-root"><span class="hdrText">bar</span></div>'
+            + '<div class="itemsContainer"><div class="card portraitCard"><div class="cardBox"><div class="cardScalable"><div class="cardImageContainer"></div></div><div class="cardFooter"><div class="cardText cardText-first">Title</div></div></div></div></div>'
+            + '<div class="itemDetailPage"><div class="mainDetailButtons"><button class="button-flat btnPlay detailButton emby-button"><span class="material-icons">play_arrow</span></button>'
+            + '<button class="button-flat btnPlaystate detailButton emby-button"><span class="material-icons">check</span></button></div></div>';
+        document.body.appendChild(host);
+        const v = T.defaultValues();
+        const ids = (sel) => T.optionsFor(host.querySelector(sel), v).map(x => x.f.id);
+        const bar = ids('.hdrText'), poster = ids('.cardImageContainer'), title = ids('.cardText'), play = ids('.btnPlay .material-icons');
+        check('picking the top bar finds its colour options', bar.indexOf('HeaderColor') !== -1 && bar.indexOf('HeaderOpacity') !== -1, bar.join(', '));
+        check('picking a poster finds the card options (incl. ones that need another option on)', poster.indexOf('BorderRadius') !== -1 && poster.indexOf('GlowSize') !== -1 && poster.indexOf('HeaderColor') === -1, poster.join(', '));
+        check('picking a card title finds the title options first', title.slice(0, 6).indexOf('HideCardTitles') !== -1 && title.indexOf('CardTitleBold') !== -1, title.join(', '));
+        // (Accent-Coloured Detail Buttons leaves Play to the solid Play option, so only the latter is expected.)
+        const played = ids('.btnPlaystate .material-icons');
+        check('picking a detail button finds the detail button options', play.indexOf('FilledPlayButton') !== -1 && played.indexOf('AccentDetailButtons') !== -1 && played.indexOf('HidePlayedBtn') !== -1, play.join(', ') + ' | ' + played.join(', '));
+        host.remove();
+        T.revealField('GlowSize');
+        check('a found option is revealed (filters cleared, flashed)', $('tb_search').value === '' && !$('tb_changed_only').checked && row('GlowSize').classList.contains('tb-flash'));
+    })();
+
     // Unsaved-changes guard.
     $('tb_close_btn').click();
     check('closing with unsaved changes asks first', $('tb_confirm').style.display === 'flex');
