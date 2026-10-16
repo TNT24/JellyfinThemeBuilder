@@ -304,7 +304,7 @@
                     var when = function (iso) { return iso ? new Date(iso).toLocaleString() : 'not yet'; };
                     // What the server recorded while registering with File Transformation (Jellyfin's logs rotate).
                     var startup = !st ? 'The server didn\'t report how registering went.'
-                        : st.state === 'registered' ? 'Registered with File Transformation at ' + when(st.registeredAt) + (st.attempts > 1 ? ' (attempt ' + st.attempts + ')' : '') + '. Last check ' + when(st.lastCheckAt) + (st.repairs ? ', repaired ' + st.repairs + ' time(s)' : '') + '.'
+                        : st.state === 'registered' ? 'Registered with File Transformation at ' + when(st.registeredAt) + ((st.registeredAttempt || st.attempts) > 1 ? ' (attempt ' + (st.registeredAttempt || st.attempts) + ')' : '') + '. Last check ' + when(st.lastCheckAt) + (st.repairs ? ', repaired ' + st.repairs + ' time(s)' : '') + '.'
                         : st.state === 'retrying' || st.state === 'starting' ? 'Still registering with File Transformation (attempt ' + st.attempts + ', ' + st.copies + ' loaded copies). Wait a minute and run the checks again.'
                         : st.state === 'unavailable' ? esc(st.error || 'File Transformation isn\'t usable.') + ' Install or enable it, then restart Jellyfin.'
                         : 'File Transformation didn\'t accept the registration after ' + st.attempts + ' attempts' + (st.error ? ': ' + esc(st.error) : '') + '. Restart Jellyfin.';

@@ -33,6 +33,8 @@ namespace JellyfinThemeBuilder
         public static int Copies { get; private set; }
         public static int CopiesRegistered { get; private set; }
         public static DateTime? RegisteredAt { get; private set; }
+        // The attempt that first registered. Attempts keeps counting: the server keeps trying other copies for a while.
+        public static int RegisteredAttempt { get; private set; }
         public static DateTime? LastCheckAt { get; private set; }
         // Whether the server's own /web/index.html had the script at the last check (null: not checked yet / failed).
         public static bool? LastCheckInjected { get; private set; }
@@ -46,15 +48,21 @@ namespace JellyfinThemeBuilder
                 Attempts = attempt;
                 Copies = copies;
                 CopiesRegistered = registered;
-                if (error != null) Error = error.GetBaseException().Message;
                 if (registered > 0)
                 {
+                    if (State != "registered")
+                    {
+                        RegisteredAttempt = attempt;
+                        RegisteredAt = DateTime.UtcNow;
+                        // Stale copies keep throwing after one accepted; that isn't a problem to report.
+                        Error = null;
+                    }
                     State = "registered";
-                    RegisteredAt ??= DateTime.UtcNow;
                 }
-                else if (State != "unavailable")
+                else
                 {
-                    State = "retrying";
+                    if (error != null) Error = error.GetBaseException().Message;
+                    if (State != "unavailable") State = "retrying";
                 }
             }
         }
@@ -95,6 +103,7 @@ namespace JellyfinThemeBuilder
                     copies = Copies,
                     copiesRegistered = CopiesRegistered,
                     registeredAt = RegisteredAt,
+                    registeredAttempt = RegisteredAttempt,
                     lastCheckAt = LastCheckAt,
                     lastCheckInjected = LastCheckInjected,
                     lastCheckError = LastCheckError,

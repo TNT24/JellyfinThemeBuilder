@@ -1842,7 +1842,7 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
             const when = (iso) => iso ? new Date(iso).toLocaleString() : 'not yet';
             add(st.state === 'registered', 'Registered with File Transformation',
                 st.state === 'registered'
-                    ? `At ${when(st.registeredAt)}${st.attempts > 1 ? ` (attempt ${st.attempts})` : ''}, ${st.copiesRegistered} of ${st.copies} loaded copies. Page last checked ${when(st.lastCheckAt)}${st.lastCheckInjected === false ? ' and the script was missing' : ''}${st.repairs ? `; repaired ${st.repairs} time(s)` : ''}.`
+                    ? `At ${when(st.registeredAt)}${(st.registeredAttempt || st.attempts) > 1 ? ` (attempt ${st.registeredAttempt || st.attempts})` : ''}, ${st.copiesRegistered} of ${st.copies} loaded copies. Page last checked ${when(st.lastCheckAt)}${st.lastCheckInjected === false ? ' and the script was missing' : ''}${st.repairs ? `; repaired ${st.repairs} time(s)` : ''}.`
                     : `State: ${esc(st.state)} after ${st.attempts} attempt(s)${st.error ? ': ' + esc(st.error) : ''}. Restart Jellyfin; Dashboard > Activity has the details.`);
         } catch (e) { add(false, 'Registered with File Transformation', 'Could not read the server\'s status: ' + e.message); }
 
