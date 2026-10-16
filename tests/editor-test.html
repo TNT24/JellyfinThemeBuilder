@@ -29,6 +29,7 @@
     window.Dashboard = { showLoadingMsg() {}, hideLoadingMsg() {}, alert() {} };
 </script>
 <script src="../Web/editor.js"></script>
+<script src="fixtures/jellyfin-web-10.10-focus.js"></script>
 <script>
 (async function () {
     const T = window.__ThemeBuilderTest;
@@ -393,7 +394,8 @@
         check('detail Play button is a circle, not an oval', Math.round(play.width) === Math.round(play.height), play.width + 'x' + play.height);
         check('every detail button is the same size and shape', Math.round(played.width) === Math.round(play.width) && getComputedStyle(host.querySelectorAll('.detailButton')[1]).borderRadius === '50%', played.width + ' vs ' + play.width);
         const tv = host.querySelector('#tvPlay'); tv.focus();
-        check('TV: focused solid Play button inverts so focus shows', getComputedStyle(tv).backgroundColor === 'rgb(242, 242, 242)' && getComputedStyle(tv.querySelector('.material-icons')).color === 'rgb(169, 112, 255)', getComputedStyle(tv).backgroundColor);
+        // Purple on light grey is only 2.86:1, so this accent inverts onto near-black instead.
+        check('TV: focused solid Play button inverts so focus shows', getComputedStyle(tv).backgroundColor === 'rgb(20, 20, 20)' && getComputedStyle(tv.querySelector('.material-icons')).color === 'rgb(169, 112, 255)', getComputedStyle(tv).backgroundColor);
         st.remove(); host.remove();
     })();
 
@@ -420,6 +422,120 @@
         const sub = look('.button-submit');
         check('TV: focused submit button differs from its unfocused accent', sub[0] !== 'rgb(229, 9, 20)' && sub[0] !== sub[1], sub.join(' / '));
         st.remove(); host.remove();
+    })();
+
+    // TV remote focus, against the real focus rules of the web client TV apps bundle (10.10): for a range of accents
+    // (pale, dark, saturated) every themed control keeps readable text on whatever is behind it while focused, and
+    // controls that are already accent look different when focused. This is the check that would have caught the
+    // Tizen tab (accent text on an accent fill), the profile icon, the guide date tabs and the solid Play button.
+    (() => {
+        check('10.10 focus rules fixture loaded', typeof window.JF_1010_FOCUS_CSS === 'string' && window.JF_1010_FOCUS_CSS.indexOf('.emby-button.show-focus:focus') !== -1);
+        if (typeof window.JF_1010_FOCUS_CSS !== 'string') return;
+        const rgb = (s) => { const m = /rgba?\(([^)]+)\)/.exec(s || ''); if (!m) return null; const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
+        const over = (top, under) => ({ r: top.r * top.a + under.r * (1 - top.a), g: top.g * top.a + under.g * (1 - top.a), b: top.b * top.a + under.b * (1 - top.a), a: 1 });
+        const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+        const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        const hex = (c) => '#' + [c.r, c.g, c.b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+        // The colour actually behind an element: its own and its ancestors' backgrounds, layered down to the page.
+        const behind = (el) => {
+            const layers = [];
+            for (let e = el; e && e !== document.documentElement; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c && c.a > 0) layers.push(c); if (c && c.a === 1) break; }
+            let base = rgb(getComputedStyle(document.documentElement).backgroundColor) || { r: 16, g: 16, b: 16, a: 1 };
+            if (base.a < 1) base = over(base, { r: 16, g: 16, b: 16, a: 1 });
+            return layers.reverse().reduce((acc, c) => over(c, acc), base);
+        };
+        const controls = [
+            ['header tab', '<div class="skinHeader"><div class="headerTabs"><button class="emby-tab-button emby-button show-focus">Home</button></div></div>', 'button'],
+            ['selected header tab', '<div class="skinHeader"><div class="headerTabs"><button class="emby-tab-button emby-button emby-tab-button-active show-focus">Movies</button></div></div>', 'button'],
+            ['header icon button', '<div class="skinHeader"><button class="headerButton paper-icon-button-light show-focus"><span class="material-icons">search</span></button></div>', 'button', 'span'],
+            ['profile icon (no picture)', '<div class="skinHeader"><button class="headerButton headerUserButton paper-icon-button-light show-focus"><span class="material-icons">person</span></button></div>', 'button', 'span', true],
+            ['guide date tab', '<button class="emby-tab-button emby-button guide-date-tab-button show-focus">Today</button>', 'button'],
+            ['raised button', '<button class="raised emby-button show-focus">Cancel</button>', 'button'],
+            ['submit button', '<button class="raised button-submit emby-button show-focus">Sign In</button>', 'button', null, true],
+            ['flat button', '<button class="button-flat emby-button show-focus">More</button>', 'button'],
+            ['detail button', '<div class="itemDetailPage"><div class="mainDetailButtons"><button class="button-flat btnPlaystate detailButton emby-button show-focus"><span class="material-icons">check</span></button></div></div>', 'button', 'span'],
+            ['solid Play button', '<div class="itemDetailPage"><div class="mainDetailButtons"><button class="button-flat btnPlay detailButton emby-button show-focus"><span class="material-icons">play_arrow</span></button></div></div>', 'button', 'span', true],
+            ['floating details button', '<button class="emby-button detailFloatingButton show-focus"><span class="material-icons">play_arrow</span></button>', 'button', 'span', true],
+            ['A–Z letter (TV)', '<button class="alphaPickerButton alphaPickerButton-tv">A</button>', 'button'],
+            ['dropdown (TV)', '<select class="emby-select-tv-withcolor"><option>English</option></select>', 'select'],
+            ['guide programme', '<div class="programCell" tabindex="0">News</div>', 'div']
+        ];
+        const themes = ['#00a4dc', '#e50914', '#a970ff', '#ffd400', '#7fffd4', '#ffffff', '#1f3a6e', '#2e7d32'].map(a => ({ AccentColor: a }))
+            .concat([{ AccentColor: '#ffd400', BackgroundColor: '#f4f4f4' }, { AccentColor: '#0b3d91', BackgroundColor: '#000000', EnableOledBlack: true }]);
+        const problems = [], unfocusable = [];
+        document.documentElement.classList.add('layout-tv');
+        themes.forEach(t => {
+            const st = document.createElement('style');
+            st.textContent = window.JF_1010_FOCUS_CSS + '\n' + T.buildCss(Object.assign(T.defaultValues(), { AccentProfileIcon: true, FilledPlayButton: true, AccentDetailButtons: true }, t));
+            document.head.appendChild(st);
+            controls.forEach(([name, html, sel, textSel, alreadyAccent]) => {
+                const host = document.createElement('div');
+                host.style.transition = 'none';
+                host.innerHTML = html;
+                document.body.appendChild(host);
+                host.querySelectorAll('*').forEach(e => { e.style.transition = 'none'; });
+                const el = host.querySelector(sel), textEl = textSel ? el.querySelector(textSel) : el;
+                const before = hex(behind(el));
+                el.focus();
+                if (document.activeElement !== el) unfocusable.push(name);
+                const fg = over(rgb(getComputedStyle(textEl).color), behind(textEl)), bg = behind(textEl);
+                const r = ratio(fg, bg);
+                const label = `${t.AccentColor}${t.BackgroundColor ? ' on ' + t.BackgroundColor : ''}: ${name}`;
+                if (r < 3) problems.push(`${label} text ${hex(fg)} on ${hex(bg)} (${r.toFixed(2)}:1)`);
+                if (alreadyAccent && hex(behind(el)) === before) problems.push(`${label} looks the same focused (${before})`);
+                el.blur(); host.remove();
+            });
+            st.remove();
+        });
+        document.documentElement.classList.remove('layout-tv');
+        check('TV focus: every control can take focus in the test', unfocusable.length === 0, [...new Set(unfocusable)].join(', '));
+        check('TV focus: readable text (3:1) and visible focus on every control, for every accent', problems.length === 0, '\n      ' + problems.join('\n      '));
+    })();
+
+    // Browsers: a clicked (mouse-focused) button keeps its own colour; only remote (show-focus) and keyboard focus fill it.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = '.raised { background: #303030; }\n' + T.buildCss(Object.assign(T.defaultValues(), { AccentColor: '#e50914' }));
+        const host = document.createElement('div');
+        host.innerHTML = '<button class="raised emby-button" style="transition:none">Cancel</button><button class="raised emby-button show-focus" style="transition:none">Cancel</button>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [, tv] = host.querySelectorAll('button');
+        // A script's focus() counts as keyboard focus in headless Chrome, so a click can't be imitated; check the rules
+        // instead: none may fill raised / fab / submit buttons on plain :focus (a click) without show-focus (TV).
+        const sheet = new CSSStyleSheet(); sheet.replaceSync(T.buildCss(T.defaultValues()).replace(/@import[^;]*;/g, ''));
+        const clickFill = [...sheet.cssRules].filter(r => r.selectorText && /background/.test(r.style.cssText))
+            .flatMap(r => r.selectorText.split(',')).map(s => s.trim())
+            .filter(s => /\.(raised|fab|button-submit)\b[^\s]*:focus(?!-visible)/.test(s) && !/show-focus/.test(s));
+        check('clicked button in a browser keeps its colour (no fill on plain :focus)', clickFill.length === 0, clickFill.join(' | '));
+        tv.focus();
+        check('remote-focused button (TV) still fills with the accent', getComputedStyle(tv).backgroundColor === 'rgb(229, 9, 20)', getComputedStyle(tv).backgroundColor);
+        st.remove(); host.remove();
+    })();
+
+    // Hidden SyncPlay icon comes back while in a group (the only way out); profile button padding; TV picture sizes.
+    (() => {
+        const st = document.createElement('style');
+        st.textContent = T.buildCss(Object.assign(T.defaultValues(), { HideHeaderSyncPlay: true, HeaderButtonPadding: '1' }));
+        const host = document.createElement('div');
+        host.style.fontSize = '10px';
+        const sync = (active) => `<button class="MuiIconButton-root" style="font-size:inherit"><span class="MuiBadge-root"><svg data-testid="GroupsIcon"></svg><span class="MuiBadge-badge MuiBadge-dot ${active ? 'MuiBadge-colorPrimary' : 'MuiBadge-colorSuccess MuiBadge-invisible'}"></span></span></button>`;
+        host.innerHTML = '<div class="MuiAppBar-root">' + sync(false) + sync(true) + '<button class="MuiIconButton-root" style="font-size:inherit"><div class="MuiAvatar-root">M</div></button></div>';
+        document.head.appendChild(st); document.body.appendChild(host);
+        const [idle, active, avatar] = host.querySelectorAll('button');
+        check('hidden SyncPlay icon stays hidden when not in a group', getComputedStyle(idle).display === 'none', getComputedStyle(idle).display);
+        check('hidden SyncPlay icon comes back while in a group', getComputedStyle(active).display !== 'none', getComputedStyle(active).display);
+        check('profile picture button only gets the extra padding (it has none of its own)', getComputedStyle(avatar).paddingLeft === '10px', getComputedStyle(avatar).paddingLeft);
+        st.remove(); host.remove();
+
+        const st2 = document.createElement('style');
+        st2.textContent = '.cardPadder-backdrop { padding-bottom: 56.25%; }\n' + T.buildCss(T.defaultValues());
+        const card = '<div class="vertical-wrap itemsContainer" style="display:flex;width:3000px"><div class="card imageEditorCard backdropCard" data-imagetype="Primary"><div class="cardBox"><div class="cardPadder-backdrop"></div></div></div></div>';
+        const desk = document.createElement('div'); desk.style.fontSize = '14.88px'; desk.innerHTML = card;
+        const tv = document.createElement('div'); tv.className = 'layout-tv'; tv.style.fontSize = '20px'; tv.innerHTML = card;
+        document.head.appendChild(st2); document.body.appendChild(desk); document.body.appendChild(tv);
+        const h = (e) => e.querySelector('.cardPadder-backdrop').getBoundingClientRect().height;
+        check('Edit Images: pictures are the same size on screen on TV (larger TV text scaled back)', Math.abs(h(desk) - h(tv)) < 2, h(desk).toFixed(1) + ' / ' + h(tv).toFixed(1));
+        st2.remove(); desk.remove(); tv.remove();
     })();
 
     // Hidden A–Z picker: it comes back while a letter is picked, or a saved letter filter can't be seen or cleared.

@@ -45,6 +45,8 @@
                 .tbc-changelog details[open] { border-color: color-mix(in srgb, var(--tbc-accent) 45%, transparent); }
                 .tbc-changelog ul { margin: 0.6em 0 0.2em 0; padding-left: 1.2em; }
                 .tbc-date { margin-left: 0.6em; color: #777; font-weight: 400; font-size: 0.88em; }
+                .tbc-banner { margin-top: 1em; padding: 0.9em 1.1em; border-radius: 10px; background: rgba(255,110,110,0.12); border: 1px solid rgba(255,110,110,0.35); color: #ffd0cc; line-height: 1.5; }
+                .tbc-banner b { color: #fff; }
             </style>
 
             <!-- Hero -->
@@ -66,6 +68,7 @@
             <!-- Live status -->
             <div class="tbc-section-title">Status</div>
             <div class="tbc-muted">Checked live when this page opens.</div>
+            <div class="tbc-banner" id="tbcBanner" style="display: none;"></div>
             <div class="tbc-status" id="tbcStatus"></div>
 
             <!-- Current theme -->
@@ -267,9 +270,11 @@
                     get('ThemeBuilder/settings').then(function (r) { return r.json(); }).catch(function () { return null; }),
                     get('web/index.html').then(function (r) { return r.text(); }).catch(function () { return ''; }),
                     get('ThemeBuilder/style.css').then(function (r) { return r.text(); }).catch(function () { return ''; }),
-                    ApiClient.getNamedConfiguration('branding').catch(function () { return null; })
+                    ApiClient.getNamedConfiguration('branding').catch(function () { return null; }),
+                    // Admin only, so it goes through ApiClient (which sends the login) rather than plain fetch.
+                    ApiClient.getJSON(ApiClient.getUrl('ThemeBuilder/status')).catch(function () { return null; })
                 ]).then(function (res) {
-                    var info = res[0], html = res[1], css = res[2], branding = res[3];
+                    var info = res[0], html = res[1], css = res[2], branding = res[3], st = res[4] && res[4].injection;
                     var s = (info && info.settings) || {};
                     var version = info ? info.version : '?';
                     page.querySelector('#tbcVersion').textContent = 'v' + version;
@@ -283,8 +288,19 @@
                     var upToDate = info && info.cssVersion === info.version;
                     var custom = (branding && branding.CustomCss) || '';
                     var tvCopy = custom.indexOf(START) !== -1;
+                    var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+                    var when = function (iso) { return iso ? new Date(iso).toLocaleString() : 'not yet'; };
+                    // What the server recorded while registering with File Transformation (Jellyfin's logs rotate).
+                    var startup = !st ? 'The server didn\'t report how registering went.'
+                        : st.state === 'registered' ? 'Registered with File Transformation at ' + when(st.registeredAt) + (st.attempts > 1 ? ' (attempt ' + st.attempts + ')' : '') + '. Last check ' + when(st.lastCheckAt) + (st.repairs ? ', repaired ' + st.repairs + ' time(s)' : '') + '.'
+                        : st.state === 'retrying' || st.state === 'starting' ? 'Still registering with File Transformation (attempt ' + st.attempts + ', ' + st.copies + ' loaded copies). Wait a minute and run the checks again.'
+                        : st.state === 'unavailable' ? esc(st.error || 'File Transformation isn\'t usable.') + ' Install or enable it, then restart Jellyfin.'
+                        : 'File Transformation didn\'t accept the registration after ' + st.attempts + ' attempts' + (st.error ? ': ' + esc(st.error) : '') + '. Restart Jellyfin.';
+                    var banner = page.querySelector('#tbcBanner');
+                    banner.style.display = injected ? 'none' : '';
+                    banner.innerHTML = '<b>The Theme Editor and the script features aren\'t loading.</b> The theme itself still shows (through Custom CSS), but the Theme Editor menu entry, the transparent top bar, night mode and the per-title accent need the script. ' + startup;
                     status.innerHTML =
-                        check(injected, 'Theme added to the web client', injected ? 'File Transformation is adding the theme and editor to every page.' : 'Not found in index.html. Install/enable File Transformation and restart Jellyfin.') +
+                        check(injected, 'Theme added to the web client', (injected ? 'File Transformation is adding the theme and editor to every page. ' : 'Not found in index.html. ') + startup) +
                         check(saved, 'Theme saved', saved ? Math.round(css.length / 1024) + ' KB of theme styles.' : 'Nothing saved yet. Open the editor and click Save & Reload.') +
                         check(!saved || upToDate, 'Built by this version', upToDate ? 'The saved theme matches v' + version + '.' : saved ? 'Built by ' + (info.cssVersion || 'an older version') + '. It rebuilds the next time an admin opens the web client.' : 'Not saved yet.') +
                         check(tvCopy, 'TV apps covered', tvCopy ? 'A copy is in Dashboard > General > Custom CSS.' : 'No copy in Custom CSS yet. Save the theme once.');

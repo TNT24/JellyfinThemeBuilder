@@ -1,3 +1,4 @@
+using MediaBrowser.Common.Api;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,8 @@ namespace JellyfinThemeBuilder.Api
 {
     [ApiController]
     [Route("ThemeBuilder")]
-    [AllowAnonymous]
+    // Anonymous per action (the page loads editor.js, style.css and settings before/without login); not on the class,
+    // where it would override the admin-only status endpoint's [Authorize].
     public class CssController : ControllerBase
     {
         private const string EditorResource = "JellyfinThemeBuilder.Web.editor.js";
@@ -25,6 +27,7 @@ namespace JellyfinThemeBuilder.Api
         }
 
         // The live editor, theme runtime and menu entries (Web/editor.js, embedded in the DLL).
+        [AllowAnonymous]
         [HttpGet("editor.js")]
         [Produces("application/javascript")]
         public IActionResult GetEditorScript()
@@ -49,6 +52,7 @@ namespace JellyfinThemeBuilder.Api
         }
 
         // The stylesheet the editor generated on its last save.
+        [AllowAnonymous]
         [HttpGet("style.css")]
         [Produces("text/css")]
         public IActionResult GetCustomCss()
@@ -74,6 +78,7 @@ namespace JellyfinThemeBuilder.Api
 
         // The saved theme settings (appearance only, nothing sensitive). Plugin configuration itself needs an
         // administrator, but every user's browser needs these for personal themes and the automatic accent.
+        [AllowAnonymous]
         [HttpGet("settings")]
         [Produces("application/json")]
         public IActionResult GetSettings()
@@ -96,6 +101,17 @@ namespace JellyfinThemeBuilder.Api
 
             string json = JsonSerializer.Serialize(new { version = Plugin.VersionText, cssVersion = config.CssVersion ?? "", settings });
             return Content(json, "application/json");
+        }
+
+        // How adding the script to the web client went (registration with File Transformation and the periodic check),
+        // for the plugin page and the editor's Diagnostics. Administrators only: it carries server error messages.
+        [HttpGet("status")]
+        [Authorize(Policy = Policies.RequiresElevation)]
+        [Produces("application/json")]
+        public IActionResult GetStatus()
+        {
+            Response.Headers.CacheControl = "no-cache";
+            return Content(JsonSerializer.Serialize(new { version = Plugin.VersionText, injection = InjectionStatus.Snapshot() }), "application/json");
         }
     }
 }

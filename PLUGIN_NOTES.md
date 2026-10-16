@@ -87,8 +87,18 @@ Always:
 From 3.0, `RegisterTransformation` resolves services from the provider File Transformation was constructed with. In an
 `IHostedService.StartAsync` that provider is already disposed: `ObjectDisposedException: 'IServiceProvider'`
 (wrapped in a `TargetInvocationException`). Nothing is injected, and the only trace is that error in the startup log.
-It works a few seconds later, once the server has finished starting (Editor's Choice registers from a startup
-scheduled task). Retry in the background (Theme Builder: every 2 s for 2 minutes) instead of trying once.
+The real cause: Jellyfin can have **many copies of File Transformation loaded** (15 on one 12.1 server), each with its
+own static `Instance`, and `AppDomain.GetAssemblies().FirstOrDefault(...)` picks a stale one whose provider is
+disposed. Retrying that copy never works. Look through `AssemblyLoadContext.All`, register with every copy that
+accepts (once each, tracked per assembly, for a couple of minutes in case the serving copy loads late), and build the
+`JObject` from that copy's own `RegisterTransformation` parameter type.
+
+Don't trust a successful call alone: fetch `http://localhost:{HttpPort}{BaseUrl}/web/index.html` from the server now
+and then and check your marker is in it (Theme Builder re-registers if not, records the result for
+`GET /ThemeBuilder/status`, and adds a Dashboard > Activity warning when it can't fix it).
+
+- An `[AllowAnonymous]` on the controller **class** overrides `[Authorize]` on its actions. Put it on each public
+  action instead, or an admin-only endpoint ends up public.
 
 ### Paths
 

@@ -134,7 +134,7 @@
         { id: 'HideInstantMixBtn', label: 'Hide Instant Mix', type: 'checkbox', default: false },
         { id: 'HideSplitBtn', label: 'Hide Split Versions', type: 'checkbox', default: false },
         { id: 'HidePlayedBtn', label: 'Hide Mark Played', type: 'checkbox', default: false },
-        { id: 'HideMoreBtn', label: 'Hide ⋮ More', type: 'checkbox', default: false },
+        { id: 'HideMoreBtn', label: 'Hide ⋮ More (also hides Edit Metadata, Edit Images, Identify and Delete there)', type: 'checkbox', default: false },
 
         { section: 'Detail Page: Sections (hides heading too)' },
         { id: 'HideCastCrew', label: 'Hide Cast & Crew (incl. Guest Stars)', type: 'checkbox', default: false },
@@ -217,6 +217,32 @@
         const lum = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
         // Pick whichever of black/white gives the higher WCAG contrast ratio.
         return (lum + 0.05) / 0.05 > 1.05 / (lum + 0.05) ? '#000000' : '#ffffff';
+    }
+
+    // WCAG relative luminance and contrast ratio (1 to 21) of #rrggbb colours.
+    function luminance(hex) {
+        const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+        if (!m) return 0;
+        const n = parseInt(m[1], 16);
+        const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+        return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+    }
+
+    function contrastRatio(a, b) {
+        const la = luminance(a), lb = luminance(b);
+        return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+    }
+
+    // The colour itself when it reads on the background (3:1, the WCAG minimum for large text and icons); otherwise
+    // mixed towards white or black, whichever gets there first.
+    function readableOn(hex, bg) {
+        if (contrastRatio(hex, bg) >= 3) return hex;
+        const dir = luminance(bg) < 0.18 ? 1 : -1;
+        for (let t = 0.1; t <= 1.001; t += 0.1) {
+            const c = shade(hex, dir * t);
+            if (contrastRatio(c, bg) >= 3) return c;
+        }
+        return dir > 0 ? '#ffffff' : '#000000';
     }
 
     function rgba(hex, alpha) {
@@ -373,30 +399,39 @@ ${nu} .cardText-first { font-size: 1.45em; font-weight: 600; opacity: 1; line-he
         // enough that a row of cards with their buttons fits in the dialog (an 18.5em-tall image filled it alone).
         // Each card's box has the poster spacing as side margin (2 × spacing in all), which the image doesn't fill,
         // so widths add it on top: card width = image height / image shape + spacing.
-        const gap = 2 * Number(v.GridSpacing), imgH = 11;
-        const w = (ratio) => Number((imgH * 100 / ratio + gap).toFixed(3));
-        const pick = (shape) => `.vertical-wrap > .imageEditorCard.${shape}Card`;
-        // Search results keep a little more width for their provider / size / language lines under the picture.
-        css += `${pick('portrait')} { width: ${Math.max(w(150), 10)}em !important; max-width: 100%; }
+        // TV text (the em) is 125% instead of 93%, so the TV layout gets the picture sizes scaled back by that much and
+        // shows them the same size on screen; the spacing is in that same em, so it isn't scaled.
+        const gap = 2 * Number(v.GridSpacing);
+        const imageSizes = (scope, k) => {
+            const imgH = 11 * k;
+            const n = (x) => Number(x.toFixed(3));
+            const w = (ratio) => n(imgH * 100 / ratio + gap);
+            const pick = (shape) => `${scope}.vertical-wrap > .imageEditorCard.${shape}Card`;
+            // Search results keep a little more width for their provider / size / language lines under the picture.
+            let out = `${pick('portrait')} { width: ${Math.max(w(150), n(10 * k))}em !important; max-width: 100%; }
 ${pick('square')} { width: ${w(100)}em !important; max-width: 100%; }
 ${pick('backdrop')} { width: ${w(56.25)}em !important; max-width: 100%; }
-${pick('banner')} { width: 30em !important; max-width: 100%; }\n`;
-        // Edit Images shows every type in the same 16:9 box, so a poster came out tiny between empty sides.
-        // Give each image type (data-imagetype) a box of its own shape. Posters, discs and 16:9 images (the backdrop
-        // rule above) share one height so a row of them lines up. Logos and banners are too wide for that height:
-        // logos get about half of it, banners a fixed width.
-        const ei = (types, width, ratio) => {
-            const cards = types.map(t => `.vertical-wrap > .imageEditorCard.backdropCard[data-imagetype="${t}"]`);
-            return `${cards.join(', ')} { width: ${width}em !important; max-width: 100%; }
+${pick('banner')} { width: ${n(30 * k)}em !important; max-width: 100%; }\n`;
+            // Edit Images shows every type in the same 16:9 box, so a poster came out tiny between empty sides.
+            // Give each image type (data-imagetype) a box of its own shape. Posters, discs and 16:9 images (the backdrop
+            // rule above) share one height so a row of them lines up. Logos and banners are too wide for that height:
+            // logos get about half of it, banners a fixed width.
+            const ei = (types, width, ratio) => {
+                const cards = types.map(t => `${scope}.vertical-wrap > .imageEditorCard.backdropCard[data-imagetype="${t}"]`);
+                return `${cards.join(', ')} { width: ${width}em !important; max-width: 100%; }
 ${cards.map(c => `${c} .cardPadder-backdrop`).join(', ')} { padding-bottom: ${ratio}% !important; }\n`;
+            };
+            return out + ei(['Primary', 'Profile', 'Box', 'BoxRear'], w(150), 150) + ei(['Disc'], w(100), 100)
+                + ei(['Logo'], n(imgH * 0.55 * 100 / 38 + gap), 38) + ei(['Banner'], n(30 * k), 18.5);
         };
-        const logoW = Number((imgH * 0.55 * 100 / 38 + gap).toFixed(3));
-        css += ei(['Primary', 'Profile', 'Box', 'BoxRear'], w(150), 150) + ei(['Disc'], w(100), 100) + ei(['Logo'], logoW, 38) + ei(['Banner'], 30, 18.5);
+        css += imageSizes('', 1) + imageSizes('.layout-tv ', 0.93 / 1.25);
 
         // Top bar spacing: extra side padding on top of each button's own (MUI icon buttons 8px, classic 0.556em;
         // MUI tab buttons 8px, MUI view tabs 16px, classic tabs 1.5em). Icon buttons become pills instead of ovals.
         const bp = Number(v.HeaderButtonPadding), tp = Number(v.HeaderTabPadding);
         if (bp > 0) css += `.MuiAppBar-root .MuiIconButton-root { padding-left: calc(8px + ${bp}em) !important; padding-right: calc(8px + ${bp}em) !important; border-radius: 999px !important; }
+/* The profile button has no padding of its own (the picture fills it), so it only gets the extra. */
+.MuiAppBar-root .MuiIconButton-root:has(.MuiAvatar-root) { padding-left: ${bp}em !important; padding-right: ${bp}em !important; }
 .skinHeader .headerButton { padding-left: calc(0.556em + ${bp}em) !important; padding-right: calc(0.556em + ${bp}em) !important; border-radius: 999px !important; }\n`;
         if (tp > 0) css += `.MuiAppBar-root .MuiToolbar-root > .MuiStack-root .MuiButton-root { padding-left: calc(8px + ${tp}em) !important; padding-right: calc(8px + ${tp}em) !important; }
 .MuiAppBar-root .MuiTab-root { padding-left: calc(16px + ${tp}em) !important; padding-right: calc(16px + ${tp}em) !important; }
@@ -435,6 +470,13 @@ ${cards.map(c => `${c} .cardPadder-backdrop`).join(', ')} { padding-bottom: ${ra
         const badgeText = badgeTextOf(v);
         const tracker = v.ProgressTrackerColor || accent;
         const r = v.BorderRadius;
+        // TV focus on controls that are already accent inverts them: accent on light grey, or on near-black when the
+        // accent is too pale to read on grey (yellow, mint, white).
+        const invertBg = contrastRatio(accent, '#f2f2f2') >= 3 ? '#f2f2f2' : '#141414';
+        // Focus on an accent submit button: a lighter accent, or a darker one when the accent is already pale.
+        const focusShade = luminance(accent) > 0.5 ? shade(accent, -0.25) : shade(accent, 0.2);
+        // Focused accent text on the page (tabs, icon buttons) that the accent alone might not make readable.
+        const focusText = readableOn(accent, bg);
         let css = '';
 
         // @import must come before every other rule.
@@ -481,7 +523,7 @@ html { background-color: ${bg} !important; }
 .itemSelectionPanel { border-color: ${accent} !important; }
 /* More controls the older clients bundled in TV apps colour blue directly. */
 .selectionCommandsPanel, .emby-button.detailFloatingButton { background-color: ${accent} !important; color: ${accentText} !important; }
-.layout-tv .emby-button.detailFloatingButton:focus { background-color: #f2f2f2 !important; color: ${accent} !important; }
+.layout-tv .emby-button.detailFloatingButton:focus { background-color: ${invertBg} !important; color: ${accent} !important; }
 .upNextDialog-countdownText, .buttonActive, .inputLabelFocused, .selectLabelFocused, .textareaLabelFocused { color: ${accent} !important; }
 @media (hover: hover) and (pointer: fine) { .emby-tab-button:hover, .button-flat:hover { color: ${accent} !important; } .paper-icon-button-light:hover:not(:disabled) { background-color: ${rgba(accent, 0.2)} !important; } }
 .paper-icon-button-light:active:not(:disabled) { color: ${accent} !important; background-color: ${rgba(accent, 0.2)} !important; }
@@ -489,11 +531,15 @@ html { background-color: ${bg} !important; }
 html .guide-channelHeaderCell:focus, html .programCell:focus { background-color: ${accent} !important; color: ${accentText} !important; }
 html .guide-date-tab-button.emby-tab-button-active, html .guide-date-tab-button:focus:not(.show-focus) { color: ${accent} !important; }
 html .card:focus .cardBox.visualCardBox, html .card:focus .cardBox:not(.visualCardBox) .cardScalable { border-color: ${accent} !important; }
-html .emby-button.show-focus:focus, html .button-submit:focus, html .raised:focus, html .fab:focus,
-html .emby-select-tv-withcolor:focus, html .alphaPickerButton-tv:focus { background-color: ${accent} !important; color: ${accentText} !important; }
-/* Submit buttons are already accent, so their focus is a lighter accent (as the web client's own), or it can't be seen. */
-html .raised.button-submit:focus, html .emby-button.button-submit.show-focus:focus { background-color: ${shade(accent, 0.2)} !important; color: ${contrastText(shade(accent, 0.2))} !important; }
-html .paper-icon-button-light.show-focus:focus, html .emby-tab-button.show-focus:focus { color: ${accent} !important; }
+html .emby-button.show-focus:focus, html .emby-select-tv-withcolor:focus, html .alphaPickerButton-tv:focus { background-color: ${accent} !important; color: ${accentText} !important; }
+/* Keyboard focus in browsers (TVs mark remote focus with show-focus instead). Plain :focus also matched a clicked
+   button, which stayed accent until you clicked elsewhere. Own rule: TVs before Chrome 86 don't know :focus-visible. */
+html .button-submit:focus-visible, html .raised:focus-visible, html .fab:focus-visible { background-color: ${accent} !important; color: ${accentText} !important; }
+/* Submit buttons are already accent, so their focus is a lighter accent (darker for a pale one), or it can't be seen. */
+html .emby-button.button-submit.show-focus:focus { background-color: ${focusShade} !important; color: ${contrastText(focusShade)} !important; }
+html .raised.button-submit:focus-visible { background-color: ${focusShade} !important; color: ${contrastText(focusShade)} !important; }
+/* Accent text on the page: lightened (or darkened) when the accent itself is too close to the page colour to read. */
+html .paper-icon-button-light.show-focus:focus, html .emby-tab-button.show-focus:focus { color: ${focusText} !important; }
 /* Header tabs are emby-buttons too, so the solid fill above landed under their accent text and hid it (TV top bar).
    They focus as accent text on no background, the web client's own look. */
 html .emby-tab-button.show-focus:focus { background: transparent !important; }
@@ -673,7 +719,7 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         if (v.FilledPlayButton) css += `.itemDetailPage .mainDetailButtons .btnPlay, .itemDetailPage .mainDetailButtons .btnReplay { background-color: ${accent} !important; border-radius: 50% !important; }
 .itemDetailPage .mainDetailButtons .btnPlay .material-icons, .itemDetailPage .mainDetailButtons .btnReplay .material-icons { color: ${accentText} !important; }
 /* TV focus: the button is already solid accent, so focus inverts it, or the focused Play looked unfocused. */
-.itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus { background-color: #f2f2f2 !important; }
+.itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus { background-color: ${invertBg} !important; }
 .itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus .material-icons, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus .material-icons { color: ${accent} !important; }\n`;
         hide(v.HideTrailerBtn, '.itemDetailPage .btnPlayTrailer');
         hide(v.HideDownloadBtn, '.itemDetailPage .btnDownload');
@@ -745,6 +791,10 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
         hide(v.HideHeaderCast, '.MuiAppBar-root .MuiIconButton-root:has([data-testid="CastIcon"]), .MuiAppBar-root .MuiIconButton-root:has([data-testid="CastConnectedIcon"])');
         hide(v.HideHeaderSyncPlay, '.headerSyncButton');
         hide(v.HideHeaderSyncPlay, '.MuiAppBar-root .MuiIconButton-root:has([data-testid="GroupsIcon"])');
+        // Hidden "Hide" traps: the button is the only way out of a SyncPlay group, so it comes back while you're in one
+        // (the newer client marks that with a primary-coloured badge dot). The cast button needs nothing: once connected
+        // it becomes a different, labelled button that the rule above doesn't match.
+        if (v.HideHeaderSyncPlay) css += `.MuiAppBar-root .MuiIconButton-root:has([data-testid="GroupsIcon"]):has(.MuiBadge-colorPrimary:not(.MuiBadge-invisible)) { display: inline-flex !important; }\n`;
         // Transparent until scrolled: editor.js sets html.tb-scrolled. TV layout is left alone (no mouse,
         // and TV apps don't run editor.js, so it would never turn solid). Only while editor.js runs (html.tb-js):
         // the theme also arrives through Custom CSS, and without the script the bar stayed clear on every scroll.
@@ -770,7 +820,7 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
 /* Classic header (TV apps): .headerUserButtonRound means the user has a picture; without one it's a person icon. */
 .skinHeader .headerUserButton:not(.headerUserButtonRound) { background-color: ${accent} !important; color: ${accentText} !important; border-radius: 999px !important; }
 /* Remote focus colours icon buttons accent, which hid the icon on its accent circle: invert it instead. */
-.skinHeader .headerUserButton.show-focus:not(.headerUserButtonRound):focus { background-color: #f2f2f2 !important; color: ${accent} !important; }\n`;
+.skinHeader .headerUserButton.show-focus:not(.headerUserButtonRound):focus { background-color: ${invertBg} !important; color: ${accent} !important; }\n`;
         // Loading spinner: classic (mdl-spinner layers) and newer (MUI CircularProgress).
         if (v.AccentSpinner) css += `.mdl-spinner__layer, .progressring-spiner { border-color: ${accent} !important; }\n.MuiCircularProgress-root { color: ${accent} !important; }\n`;
 
@@ -1380,8 +1430,18 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
             add(html.indexOf('ThemeBuilder/editor.js') !== -1, 'Server adds the theme to the web client',
                 html.indexOf('ThemeBuilder/editor.js') !== -1 ? 'index.html includes the editor script and stylesheet.' : 'index.html does not include the script. Is File Transformation installed and enabled?');
         } catch (e) { add(false, 'Server adds the theme to the web client', 'Could not load index.html: ' + e.message); }
+        // What the server recorded while registering with File Transformation, and its periodic check of the page.
+        try {
+            const st = (await ApiClient.getJSON(ApiClient.getUrl('ThemeBuilder/status'))).injection;
+            const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+            const when = (iso) => iso ? new Date(iso).toLocaleString() : 'not yet';
+            add(st.state === 'registered', 'Registered with File Transformation',
+                st.state === 'registered'
+                    ? `At ${when(st.registeredAt)}${st.attempts > 1 ? ` (attempt ${st.attempts})` : ''}, ${st.copiesRegistered} of ${st.copies} loaded copies. Page last checked ${when(st.lastCheckAt)}${st.lastCheckInjected === false ? ' and the script was missing' : ''}${st.repairs ? `; repaired ${st.repairs} time(s)` : ''}.`
+                    : `State: ${esc(st.state)} after ${st.attempts} attempt(s)${st.error ? ': ' + esc(st.error) : ''}. Restart Jellyfin; Dashboard > Activity has the details.`);
+        } catch (e) { add(false, 'Registered with File Transformation', 'Could not read the server\'s status: ' + e.message); }
 
-        const sheet = [...document.styleSheets].find(s => (s.href || '').indexOf('ThemeBuilder/style.css') !== -1);
+        const sheet =[...document.styleSheets].find(s => (s.href || '').indexOf('ThemeBuilder/style.css') !== -1);
         let ruleCount = -1;
         try { ruleCount = sheet ? sheet.cssRules.length : -1; } catch (e) { ruleCount = -1; }
         add(ruleCount > 0, 'Saved theme stylesheet loaded', ruleCount > 0 ? ruleCount + ' rules active.' : 'style.css is missing or empty. Save the theme once.');
