@@ -183,12 +183,56 @@ namespace JellyfinThemeBuilder
             }
         }
 
+        // How long to keep retrying the File Transformation registration (see RegisterWithRetriesAsync).
+        private const int RegisterAttempts = 60;
+        private static readonly TimeSpan RegisterRetryDelay = TimeSpan.FromSeconds(2);
+
         public Task StartAsync(CancellationToken cancellationToken)
         {
             RestoreBrandingCopy();
 
             _logger.LogInformation("[ThemeBuilder] Server booted. Registering global script with File Transformation.");
-            
+            // Not awaited: startup mustn't wait for the retries.
+            _ = Task.Run(RegisterWithRetriesAsync);
+            return Task.CompletedTask;
+        }
+
+        // File Transformation 3.x resolves its services from the provider it was created with, and this early in startup
+        // that provider has already been disposed (ObjectDisposedException inside RegisterTransformation), so the script
+        // was never injected. It works once the server has finished starting, as other plugins registering from a
+        // startup task show. So retry for a while instead of giving up after the first try.
+        private async Task RegisterWithRetriesAsync()
+        {
+            for (int attempt = 1; attempt <= RegisterAttempts; attempt++)
+            {
+                bool? result = TryRegister(out Exception? error);
+                if (result == true)
+                {
+                    _logger.LogInformation("[ThemeBuilder] Successfully registered script injection{Attempt}.",
+                        attempt > 1 ? $" (attempt {attempt})" : "");
+                    return;
+                }
+                // null: File Transformation is missing or incompatible; retrying won't change that.
+                if (result == null) return;
+                if (attempt == 1)
+                {
+                    _logger.LogInformation("[ThemeBuilder] File Transformation isn't ready yet ({Reason}); retrying until it is.",
+                        error?.GetBaseException().Message);
+                }
+                else if (attempt == RegisterAttempts)
+                {
+                    _logger.LogError(error, "[ThemeBuilder] Could not register with File Transformation after {Attempts} attempts. " +
+                        "The theme editor and script features won't load until Jellyfin is restarted.", RegisterAttempts);
+                    return;
+                }
+                await Task.Delay(RegisterRetryDelay).ConfigureAwait(false);
+            }
+        }
+
+        // true: registered. false: File Transformation threw (may work on a later try). null: it isn't usable at all.
+        private bool? TryRegister(out Exception? error)
+        {
+            error = null;
             try
             {
                 var ftAssembly = AppDomain.CurrentDomain.GetAssemblies()
@@ -199,7 +243,7 @@ namespace JellyfinThemeBuilder
                     _logger.LogWarning("[ThemeBuilder] File Transformation plugin assembly not found in the loaded assembly list. " +
                         "Is it installed and did it load successfully? (A crash in an unrelated plugin during boot can prevent " +
                         "other plugins' assemblies from ever loading, which will land you here silently.)");
-                    return Task.CompletedTask;
+                    return null;
                 }
 
                 var interfaceType = ftAssembly.GetType("Jellyfin.Plugin.FileTransformation.PluginInterface");
@@ -207,7 +251,7 @@ namespace JellyfinThemeBuilder
                 {
                     _logger.LogWarning("[ThemeBuilder] File Transformation assembly was found but its PluginInterface type was not. " +
                         "It may be an incompatible version.");
-                    return Task.CompletedTask;
+                    return null;
                 }
 
                 var registerMethod = interfaceType.GetMethod("RegisterTransformation");
@@ -215,7 +259,7 @@ namespace JellyfinThemeBuilder
                 {
                     _logger.LogWarning("[ThemeBuilder] File Transformation's RegisterTransformation method was not found. " +
                         "It may be an incompatible version.");
-                    return Task.CompletedTask;
+                    return null;
                 }
 
                 string json = JsonSerializer.Serialize(new
@@ -240,21 +284,20 @@ namespace JellyfinThemeBuilder
                 if (jObjectType == null)
                 {
                     _logger.LogWarning("[ThemeBuilder] Newtonsoft.Json is not loaded; cannot register with File Transformation.");
-                    return Task.CompletedTask;
+                    return null;
                 }
 
                 var parseMethod = jObjectType.GetMethod("Parse", new[] { typeof(string) });
                 var payload = parseMethod!.Invoke(null, new object[] { json });
 
                 registerMethod.Invoke(null, new object?[] { payload });
-                _logger.LogInformation("[ThemeBuilder] Successfully registered script injection.");
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[ThemeBuilder] A critical error occurred while registering with File Transformation.");
+                error = ex;
+                return false;
             }
-
-            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

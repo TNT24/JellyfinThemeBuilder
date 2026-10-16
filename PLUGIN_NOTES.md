@@ -82,6 +82,14 @@ Always:
 - Return the original contents on any exception. Never blank a file.
 - Skip if already injected (check for your own marker/URL).
 
+### ⚠️ File Transformation 3.x: registering too early fails
+
+From 3.0, `RegisterTransformation` resolves services from the provider File Transformation was constructed with. In an
+`IHostedService.StartAsync` that provider is already disposed: `ObjectDisposedException: 'IServiceProvider'`
+(wrapped in a `TargetInvocationException`). Nothing is injected, and the only trace is that error in the startup log.
+It works a few seconds later, once the server has finished starting (Editor's Choice registers from a startup
+scheduled task). Retry in the background (Theme Builder: every 2 s for 2 minutes) instead of trying once.
+
 ### Paths
 
 `index.html` is served from `{baseUrl}/web/`, so injected URLs must be relative and go up one level:
