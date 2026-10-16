@@ -891,6 +891,62 @@
         check('a found option is revealed (filters cleared, flashed)', $('tb_search').value === '' && !$('tb_changed_only').checked && row('GlowSize').classList.contains('tb-flash'));
     })();
 
+    // Organising: group tabs, Essentials view, indented / folded dependants, "Hide on this page" lists, search words.
+    (() => {
+        const shown = (id) => row(id).style.display !== 'none' && row(id).closest('.tb-section').style.display !== 'none';
+        const tab = (g) => document.querySelector(`.tb-group[data-group="${g}"]`).click();
+        const groups = [...document.querySelectorAll('.tb-group')].map(b => b.getAttribute('data-group')).filter(Boolean);
+        check('six option groups plus All', groups.length === 6 && !!document.querySelector('.tb-group[data-group=""]'), groups.join(', '));
+        check('tiny sections merged into their neighbours', !T.fields.some(f => /^(Episode Lists|User Themes|Library Pages|Text & Scrollbars)$/.test(f.section || '')) && T.fields.filter(f => f.section).every(s => s.group));
+        tab('Posters');
+        const visibleGroups = [...new Set([...document.querySelectorAll('.tb-section')].filter(s => s.style.display !== 'none').map(s => s.getAttribute('data-group')))];
+        check('a group tab shows only its sections', visibleGroups.length === 1 && visibleGroups[0] === 'Posters', visibleGroups.join(', '));
+        $('tb_search').value = 'subtitle'; fire($('tb_search'));
+        check('search looks across every group, whatever the tab', shown('SubtitleScale'));
+        $('tb_search').value = ''; fire($('tb_search'));
+        tab('');
+
+        // Essentials: a non-essential option at its default is out of the way; changed, it shows; "Show all" shows the rest.
+        const ess = $('tb_essentials_btn');
+        if (!/Show all/.test(ess.textContent)) ess.click();
+        setVal('HeaderButtonPadding', '0'); setVal('HomeRowSpacing', '2');
+        check('Essentials view hides untouched advanced options', !shown('HeaderButtonPadding') && shown('AccentColor') && /Show all options \(\d+ more\)/.test(ess.textContent), ess.textContent);
+        check('a changed option always shows, even if not an essential', shown('HomeRowSpacing'));
+        ess.click();
+        check('"Show all options" shows everything', shown('HeaderButtonPadding') && /essentials/.test(ess.textContent));
+        ess.click();
+        setVal('HomeRowSpacing', '0');
+
+        // Dependants: indented under their option, folded away while its checkbox doesn't let them work.
+        setVal('EnableHoverGlow', false);
+        check('dependants are indented under their option', row('GlowSize').classList.contains('tb-child') && row('GlassOpacity').classList.contains('tb-child') && !row('EnableHoverGlow').classList.contains('tb-child'));
+        check('a dependant folds away while its checkbox is off', !shown('GlowSize'));
+        setVal('EnableHoverGlow', true);
+        check('and unfolds when it is ticked (shown with its parent, even in Essentials)', shown('GlowSize'));
+        setVal('HideCardTitles', true);
+        check('options under a "Hide" fold away while it is ticked', !shown('CardTitlePosition'));
+        setVal('HideCardTitles', false);
+        $('tb_search').value = 'glow size'; setVal('EnableHoverGlow', false); fire($('tb_search'));
+        check('search still finds a folded option (greyed, with its hint)', shown('GlowSize') && row('GlowSize').classList.contains('tb-inactive'));
+        $('tb_search').value = ''; fire($('tb_search'));
+
+        // "Hide on this page" lists.
+        check('plain Hide options sit in the section\'s Hide list', !!row('HideGenres').closest('.tb-hide-list') && !!row('HideTrailerBtn').closest('.tb-hide-list') && row('HideGenres').closest('.tb-section') === row('HideTagline').closest('.tb-section'));
+        check('a Hide that other options depend on stays in the main list', !row('HideCardTitles').closest('.tb-hide-list') && !row('HideDetailPoster').closest('.tb-hide-list'));
+        check('Hide list entries drop the repeated "Hide"', /^Genres/.test(row('HideGenres').textContent.trim()), row('HideGenres').textContent.trim());
+
+        // Search words and US spellings.
+        const finds = (q, id) => { $('tb_search').value = q; fire($('tb_search')); const ok = shown(id); $('tb_search').value = ''; fire($('tb_search')); return ok; };
+        check('search understands everyday words', finds('rounded', 'BorderRadius') && finds('wallpaper', 'AppBackgroundUrl') && finds('captions', 'SubtitleStyle') && finds('avatar', 'AccentProfileIcon'));
+        check('search accepts US spellings', finds('accent color', 'AccentColor') && finds('center', 'TopBarLayout') && finds('favorite', 'HideLikeDislike'));
+
+        // A picked option is revealed even when it's in another tab or outside Essentials.
+        tab('Look');
+        T.revealField('HeaderTabPadding');
+        check('revealing an option switches to its tab and shows it', shown('HeaderTabPadding') && document.querySelector('.tb-group.tb-active').getAttribute('data-group') === 'Navigation');
+        tab('');
+    })();
+
     // Unsaved-changes guard.
     $('tb_close_btn').click();
     check('closing with unsaved changes asks first', $('tb_confirm').style.display === 'flex');

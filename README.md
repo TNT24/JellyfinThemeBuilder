@@ -29,7 +29,11 @@ Download the zip from the [latest release](https://github.com/TNT24/JellyfinThem
 
 1. Open the user menu (your profile picture, top right) and choose **Theme Editor**. Only administrators see it.
 2. Change options on the right. The preview and the page behind it update live.
-3. Try a **Preset**, search for options, or click **Changed only** to review your edits.
+   - The tabs (Look, Navigation, Posters, Details, Player, Extras) narrow the list down. It starts with the essentials; **Show all options** lists the rest, and anything you've changed always shows.
+   - Not sure which option styles something? Click the crosshair, then click it on the page.
+   - Small icons next to an option show where it works (browsers, phones, TV apps). Options that do nothing with your current settings are greyed out and say why.
+   - The **TV** preview shows how buttons look when a TV remote focuses them.
+3. Try a **Preset**, search for options (everyday words work, like "rounded" or "wallpaper"), or click **Changed only** to review your edits.
 4. Click **Save & Reload**. The theme applies to everyone.
 
 The plugin's page in **Dashboard → Plugins → Theme Builder** shows status checks, the current theme and a changelog.
@@ -67,7 +71,7 @@ Presets include Jellyfin Default, OLED Black, Minimal, Netflix Red, Disney+, App
 
 ## Troubleshooting
 
-- **No "Theme Editor" in the menu:** it's for administrators only. On the plugin page, **Theme added to the web client** must be green. If it isn't, make sure File Transformation is installed and enabled, then restart Jellyfin.
+- **No "Theme Editor" in the menu:** it's for administrators only. On the plugin page, **Theme added to the web client** must be green. If it isn't, the page says what went wrong when the server tried to add it, and **Dashboard → Activity** has a warning. Make sure File Transformation is installed and enabled, then restart Jellyfin. The server also checks every few minutes and adds the script back if it goes missing.
 - **Changes don't show:** clear the browser's site data for Jellyfin (F12 → Application → Clear site data) and reload.
 - **A page looks blank or broken:** open the Theme Editor and click **Diagnostics**. It checks that the page scripts aren't damaged and that everything is up to date.
 

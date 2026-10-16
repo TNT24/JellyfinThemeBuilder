@@ -7,7 +7,7 @@
     const SAVE_COLOR = '#1f9d55';
 
     const fields = [
-        { section: 'Colours' },
+        { section: 'Colours & Text', group: 'Look' },
         { id: 'AccentColor', label: 'Accent Colour (buttons, tabs, highlights)', type: 'color', default: '#00a4dc' },
         { id: 'BackgroundColor', label: 'Page Background', type: 'color', default: '#101010' },
         { id: 'SurfaceColor', label: 'Menus & Dialogs', type: 'color', default: '#202020' },
@@ -16,13 +16,11 @@
         { id: 'AccentSpinner', label: 'Accent-Coloured Loading Spinner', type: 'checkbox', default: true },
         { id: 'GlassMenus', label: 'Frosted Glass Menus & Dialogs', type: 'checkbox', default: false },
         { id: 'GlassOpacity', label: 'Glass Opacity', type: 'range', min: '0.3', max: '1', step: '0.05', default: '0.7' },
-
-        { section: 'Text & Scrollbars' },
         { id: 'CustomFontFamily', label: 'Google Font Name (e.g. Inter)', type: 'text', default: '' },
         { id: 'TextScale', label: 'Text Size (%)', type: 'range', min: '80', max: '130', step: '5', default: '100' },
         { id: 'EnableSlimScrollbars', label: 'Slim Accent Scrollbars', type: 'checkbox', default: true },
 
-        { section: 'Backgrounds' },
+        { section: 'Backgrounds', group: 'Look' },
         { id: 'AppBackgroundUrl', label: 'App Background Image URL', type: 'text', default: '' },
         { id: 'AppBackgroundDim', label: 'Background Image Darkness', type: 'range', min: '0', max: '1', step: '0.05', default: '0.7' },
         { id: 'AppAccentGlow', label: 'Soft Accent Glow at the Top of Pages', type: 'checkbox', default: false },
@@ -36,7 +34,7 @@
         { id: 'BackdropDim', label: 'Title Backdrop Darkness (when Backdrops are on in Display settings)', type: 'range', min: '0', max: '1', step: '0.02', default: '0.86' },
         { id: 'BackdropBlur', label: 'Title Backdrop Blur (px)', type: 'range', min: '0', max: '20', step: '1', default: '0' },
 
-        { section: 'Top Bar' },
+        { section: 'Top Bar', group: 'Navigation' },
         { id: 'HeaderColor', label: 'Top Navigation Bar Colour', type: 'color', default: '#000000' },
         { id: 'HeaderOpacity', label: 'Top Bar Opacity', type: 'range', min: '0', max: '1', step: '0.05', default: '0.8' },
         { id: 'HeaderBlur', label: 'Header Blur (px)', type: 'range', min: '0', max: '30', step: '1', default: '15' },
@@ -51,7 +49,7 @@
         { id: 'HideHeaderCast', label: 'Hide Cast / Play-On Icon', type: 'checkbox', default: false },
         { id: 'HideHeaderSyncPlay', label: 'Hide SyncPlay Icon', type: 'checkbox', default: false },
 
-        { section: 'Home Screen' },
+        { section: 'Home & Library Pages', group: 'Navigation' },
         { id: 'HomeTitleScale', label: 'Row Title Size (%)', type: 'range', min: '70', max: '160', step: '5', default: '100' },
         { id: 'HomeTitleAlign', label: 'Row Title Alignment', type: 'select', default: 'left', options: [['left', 'Left'], ['center', 'Centred']] },
         { id: 'HomeTitleIndent', label: 'Extra Row Title Indent (em)', type: 'range', min: '0', max: '3', step: '0.25', default: '0' },
@@ -59,8 +57,11 @@
         { id: 'HideMyMediaRow', label: 'Hide "My Media" Library Row', type: 'checkbox', default: false },
         { id: 'HideMyMediaTitles', label: 'Hide Titles Under "My Media" Tiles', type: 'checkbox', default: false },
         { id: 'HideRowSeeAll', label: 'Hide Row Title Arrows (›)', type: 'checkbox', default: false },
+        { id: 'HidePlayAll', label: 'Hide "Play All" Button', type: 'checkbox', default: false },
+        { id: 'HideShuffle', label: 'Hide "Shuffle" Button', type: 'checkbox', default: false },
+        { id: 'HideAlphaPicker', label: 'Hide A–Z Letter Picker', type: 'checkbox', default: false },
 
-        { section: 'Cards & Posters' },
+        { section: 'Cards & Posters', group: 'Posters' },
         { id: 'PosterSize', label: 'Poster Size', type: 'select', default: 'default', options: [['small', 'Small (more per row)'], ['default', 'Medium (Jellyfin default)'], ['large', 'Large (Disney+)'], ['xlarge', 'Extra large (Apple TV+)']] },
         { id: 'BorderRadius', label: 'Corner Radius (em)', type: 'range', min: '0', max: '2', step: '0.1', default: '0.2' },
         { id: 'SeparateWideRadius', label: 'Different Corner Radius for Wide Tiles', type: 'checkbox', default: false },
@@ -74,22 +75,22 @@
         { id: 'EnableHoverGlow', label: 'Accent Glow on Hover', type: 'checkbox', default: false },
         { id: 'GlowSize', label: 'Hover Glow Size (px)', type: 'range', min: '0', max: '40', step: '1', default: '14' },
 
-        { section: 'Card Titles' },
+        { section: 'Card Titles', group: 'Posters' },
         { id: 'HideCardTitles', label: 'Hide Titles Under Cards', type: 'checkbox', default: false },
         { id: 'CardTitlePosition', label: 'Title Position', type: 'select', default: 'below', options: [['below', 'Below the poster'], ['overlay', 'On the poster (Apple TV+)'], ['overlayHover', 'On the poster, only on hover / focus (Netflix)']] },
         { id: 'CardTitleLines', label: 'Card Title Lines', type: 'select', default: '1', options: [['1', 'One line (cut off with …)'], ['2', 'Up to two lines']] },
         { id: 'CardTitleAlign', label: 'Card Title Alignment', type: 'select', default: 'center', options: [['center', 'Centred'], ['left', 'Left']] },
         { id: 'CardTitleBold', label: 'Bold Card Titles', type: 'checkbox', default: false },
 
-        { section: 'Card Buttons (⋮ menu, played, favourite, play)' },
-        { id: 'HideCardOverlayButtons', label: 'Hide Card Buttons (shown on hover)', type: 'checkbox', default: false },
+        { section: 'Card Buttons (⋮ menu, played, favourite, play)', group: 'Posters' },
         { id: 'CardButtonColor', label: 'Button Icon Colour', type: 'color', default: '#ffffff' },
         { id: 'CardButtonPlayedColor', label: 'Played Tick Colour (when marked played)', type: 'color', default: '#00a4dc' },
         { id: 'CardButtonFavoriteColor', label: 'Favourite Heart Colour (when favourited)', type: 'color', default: '#cc3333' },
         { id: 'CardButtonBgOpacity', label: 'Button Background Darkness', type: 'range', min: '0', max: '1', step: '0.05', default: '0' },
         { id: 'CardButtonGlow', label: 'Glowing Buttons (each glows in its own colour)', type: 'checkbox', default: false },
+        { id: 'HideCardOverlayButtons', label: 'Hide Card Buttons (shown on hover)', type: 'checkbox', default: false },
 
-        { section: 'Watched & Progress' },
+        { section: 'Watched & Progress', group: 'Posters' },
         { id: 'LinkWatchedToAccent', label: 'Watched Badge Uses Accent Colour', type: 'checkbox', default: true },
         { id: 'WatchedIndicatorColor', label: 'Watched Badge Colour', type: 'color', default: '#00a4dc' },
         { id: 'AutoBadgeText', label: 'Badge Text Colour: Automatic (black or white)', type: 'checkbox', default: true },
@@ -101,22 +102,23 @@
         { id: 'ProgressBarHeight', label: 'Progress Bar Thickness (em)', type: 'range', min: '0.1', max: '0.8', step: '0.02', default: '0.28' },
         { id: 'ProgressTrackerRadius', label: 'Progress Bar Rounding (em)', type: 'range', min: '0', max: '1', step: '0.1', default: '0' },
 
-        { section: 'Library Pages' },
-        { id: 'HidePlayAll', label: 'Hide "Play All" Button', type: 'checkbox', default: false },
-        { id: 'HideShuffle', label: 'Hide "Shuffle" Button', type: 'checkbox', default: false },
-        { id: 'HideAlphaPicker', label: 'Hide A–Z Letter Picker', type: 'checkbox', default: false },
+        { section: 'Ratings & Badges (all pages)', group: 'Posters' },
+        { id: 'HideRatings', label: 'Hide Star & Critic Ratings', type: 'checkbox', default: false },
+        { id: 'HideAgeRating', label: 'Hide Age Rating (PG-13, 15, TV-MA…)', type: 'checkbox', default: false },
+        { id: 'HideLikeDislike', label: 'Hide Favourite (Heart) Button', type: 'checkbox', default: false },
+        { id: 'HideLanguageFlags', label: 'Hide Language Flags (Jellyfin Enhanced)', type: 'checkbox', default: false },
 
-        { section: 'Detail Page: Banner & Title' },
+        { section: 'Detail Page: Banner & Title', group: 'Details' },
         { id: 'BannerDim', label: 'Banner Darkness', type: 'range', min: '0', max: '0.9', step: '0.05', default: '0' },
         { id: 'BannerBlur', label: 'Banner Blur (px)', type: 'range', min: '0', max: '20', step: '1', default: '0' },
         { id: 'RibbonOpacity', label: 'Title Ribbon Background Opacity (uses Menus colour)', type: 'range', min: '0', max: '1', step: '0.05', default: '0.8' },
         { id: 'DetailTitleScale', label: 'Title Size (%)', type: 'range', min: '60', max: '140', step: '5', default: '100' },
+        { id: 'DetailAlign', label: 'Title, Info & Buttons Alignment', type: 'select', default: 'left', options: [['left', 'Left (Netflix)'], ['center', 'Centred, logo on top (Apple TV+)']] },
         { id: 'HideDetailPoster', label: 'Hide Poster', type: 'checkbox', default: false },
         { id: 'DetailPosterSide', label: 'Poster Side', type: 'select', default: 'left', options: [['left', 'Left'], ['right', 'Right']] },
-        { id: 'DetailAlign', label: 'Title, Info & Buttons Alignment', type: 'select', default: 'left', options: [['left', 'Left (Netflix)'], ['center', 'Centred, logo on top (Apple TV+)']] },
         { id: 'HideDetailLogo', label: 'Hide Title Logo Image', type: 'checkbox', default: false },
 
-        { section: 'Detail Page: Info' },
+        { section: 'Detail Page: Info', group: 'Details' },
         { id: 'HideDetailMiscInfo', label: 'Hide Secondary Info Line (end time, etc.)', type: 'checkbox', default: false },
         { id: 'HideGenres', label: 'Hide Genres', type: 'checkbox', default: false },
         { id: 'HideTagline', label: 'Hide Tagline', type: 'checkbox', default: false },
@@ -126,7 +128,7 @@
         { id: 'HideTrackSelects', label: 'Hide Version / Audio / Subtitle Dropdowns', type: 'checkbox', default: false },
         { id: 'HideAudioLanguages', label: 'Hide Audio Languages on Details Page (Jellyfin Enhanced)', type: 'checkbox', default: false },
 
-        { section: 'Detail Page: Buttons' },
+        { section: 'Detail Page: Buttons', group: 'Details' },
         { id: 'AccentDetailButtons', label: 'Accent-Coloured Detail Buttons (Play, Trailer…)', type: 'checkbox', default: true },
         { id: 'FilledPlayButton', label: 'Solid Accent Play / Resume Button', type: 'checkbox', default: false },
         { id: 'HideTrailerBtn', label: 'Hide Trailer', type: 'checkbox', default: false },
@@ -136,27 +138,19 @@
         { id: 'HidePlayedBtn', label: 'Hide Mark Played', type: 'checkbox', default: false },
         { id: 'HideMoreBtn', label: 'Hide ⋮ More (also hides Edit Metadata, Edit Images, Identify and Delete there)', type: 'checkbox', default: false },
 
-        { section: 'Detail Page: Sections (hides heading too)' },
-        { id: 'HideCastCrew', label: 'Hide Cast & Crew (incl. Guest Stars)', type: 'checkbox', default: false },
+        { section: 'Detail Page: Sections & Episodes', group: 'Details' },
         { id: 'HideNextUp', label: 'Hide Next Up', type: 'checkbox', default: false },
         { id: 'NextUpLayout', label: 'Next Up Layout (series pages)', type: 'select', default: 'featured', options: [['featured', 'Large, details beside the image (Apple TV+)'], ['default', 'Small card (Jellyfin default)']] },
+        { id: 'HideCastCrew', label: 'Hide Cast & Crew (incl. Guest Stars)', type: 'checkbox', default: false },
         { id: 'HideMoreFrom', label: 'Hide "More From Season / Artist"', type: 'checkbox', default: false },
         { id: 'HideSpecials', label: 'Hide Special Features', type: 'checkbox', default: false },
         { id: 'HideScenes', label: 'Hide Scenes / Chapters', type: 'checkbox', default: false },
         { id: 'HideSimilar', label: 'Hide More Like This', type: 'checkbox', default: false },
         { id: 'HideCollections', label: 'Hide Collections / Music Videos / Extra Parts', type: 'checkbox', default: false },
-
-        { section: 'Episode Lists' },
-        { id: 'HideEpisodeOverview', label: 'Hide Episode Descriptions', type: 'checkbox', default: false },
         { id: 'EpisodeThumbScale', label: 'Episode Thumbnail Size (%)', type: 'range', min: '60', max: '160', step: '10', default: '100' },
+        { id: 'HideEpisodeOverview', label: 'Hide Episode Descriptions', type: 'checkbox', default: false },
 
-        { section: 'Ratings & Badges (all pages)' },
-        { id: 'HideRatings', label: 'Hide Star & Critic Ratings', type: 'checkbox', default: false },
-        { id: 'HideAgeRating', label: 'Hide Age Rating (PG-13, 15, TV-MA…)', type: 'checkbox', default: false },
-        { id: 'HideLikeDislike', label: 'Hide Favourite (Heart) Button', type: 'checkbox', default: false },
-        { id: 'HideLanguageFlags', label: 'Hide Language Flags (Jellyfin Enhanced)', type: 'checkbox', default: false },
-
-        { section: 'Video Player' },
+        { section: 'Video Player', group: 'Player' },
         { id: 'AccentPlayer', label: 'Accent Player Timeline, Volume & Sliders', type: 'checkbox', default: true },
         { id: 'AccentPlayerButtons', label: 'Accent Player Buttons (pause, skip, rewind…)', type: 'checkbox', default: false },
         { id: 'SubtitleStyle', label: 'Subtitle Style', type: 'select', default: 'default', options: [
@@ -164,44 +158,43 @@
             ['yellow', 'Yellow with black outline'], ['boxed', 'White on dark box'], ['bold', 'Bold white with outline'] ] },
         { id: 'SubtitleScale', label: 'Subtitle Size (%)', type: 'range', min: '50', max: '200', step: '10', default: '100' },
 
-        { section: 'Login Page' },
+        { section: 'Login Page', group: 'Extras' },
         { id: 'LoginBackgroundUrl', label: 'Background Image URL', type: 'text', default: '' },
         { id: 'LoginBackgroundBlur', label: 'Background Blur (px)', type: 'range', min: '0', max: '20', step: '1', default: '0' },
         { id: 'LoginLogoUrl', label: 'Logo Image URL (above the form)', type: 'text', default: '' },
         { id: 'LoginWelcomeText', label: 'Welcome Text', type: 'text', default: '' },
         { id: 'HideForgotPassword', label: 'Hide "Forgot Password" Button', type: 'checkbox', default: false },
 
-        { section: 'Night Mode' },
+        { section: 'Night Mode & Personal Themes', group: 'Extras' },
         { id: 'NightMode', label: 'Dim the App at Night', type: 'checkbox', default: false },
         { id: 'NightStart', label: 'Night Starts (hour, 24h)', type: 'range', min: '0', max: '23', step: '1', default: '22' },
         { id: 'NightEnd', label: 'Night Ends (hour, 24h)', type: 'range', min: '0', max: '23', step: '1', default: '7' },
         { id: 'NightDim', label: 'Night Dimming', type: 'range', min: '0', max: '0.6', step: '0.05', default: '0.2' },
         { id: 'NightOled', label: 'Use True Black at Night', type: 'checkbox', default: true },
-
-        { section: 'User Themes' },
         { id: 'AllowUserThemes', label: 'Let Every User Pick a Personal Theme (adds "My Theme" to their menu)', type: 'checkbox', default: false }
     ];
 
     // Options that only do something while another option is set. The editor greys them out (they stay editable,
-    // so they can be set up first) with the hint. [is it in effect?, what has to be set]
+    // so they can be set up first) with the hint. [is it in effect?, what has to be set, the option it hangs off]
+    // The panel lists each one indented under that option, and folds it away while a checkbox parent is unset.
     const optLabel = (id) => '"' + fields.find(f => f.id === id).label.replace(/ \(.*\)$/, '') + '"';
-    const needsOn = (id) => [v => !!v[id], `Takes effect with ${optLabel(id)} on.`];
-    const needsOff = (id) => [v => !v[id], `Has no effect while ${optLabel(id)} is on.`];
+    const needsOn = (id) => [v => !!v[id], `Takes effect with ${optLabel(id)} on.`, id];
+    const needsOff = (id) => [v => !v[id], `Has no effect while ${optLabel(id)} is on.`, id];
     const DEPENDS = {
         GlassOpacity: needsOn('GlassMenus'),
-        AppBackgroundDim: [v => !!String(v.AppBackgroundUrl || '').trim(), `Takes effect once ${optLabel('AppBackgroundUrl')} is set.`],
-        BgGradientColor1: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`],
-        BgGradientColor2: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`],
-        BgGradientStrength: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`],
-        BgGradientAngle: [v => v.BgGradient === 'linear', `Only for the Linear ${optLabel('BgGradient')}.`],
-        BgGradientPosition: [v => v.BgGradient === 'radial', `Only for the Radial glow ${optLabel('BgGradient')}.`],
+        AppBackgroundDim: [v => !!String(v.AppBackgroundUrl || '').trim(), `Takes effect once ${optLabel('AppBackgroundUrl')} is set.`, 'AppBackgroundUrl'],
+        BgGradientColor1: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`, 'BgGradient'],
+        BgGradientColor2: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`, 'BgGradient'],
+        BgGradientStrength: [v => v.BgGradient !== 'off', `Takes effect with a ${optLabel('BgGradient')} picked.`, 'BgGradient'],
+        BgGradientAngle: [v => v.BgGradient === 'linear', `Only for the Linear ${optLabel('BgGradient')}.`, 'BgGradient'],
+        BgGradientPosition: [v => v.BgGradient === 'radial', `Only for the Radial glow ${optLabel('BgGradient')}.`, 'BgGradient'],
         TvPlainBackground: [v => !!String(v.AppBackgroundUrl || '').trim() || v.AppAccentGlow || v.BgGradient !== 'off', 'Takes effect with a background image, accent glow or gradient set.'],
-        HeaderBlur: [v => Number(v.HeaderOpacity) < 1, `Only shows while ${optLabel('HeaderOpacity')} is below 1.`],
-        HeaderLogoHeight: [v => !!String(v.HeaderLogoUrl || '').trim(), `Takes effect once ${optLabel('HeaderLogoUrl')} is set.`],
+        HeaderBlur: [v => Number(v.HeaderOpacity) < 1, `Only shows while ${optLabel('HeaderOpacity')} is below 1.`, 'HeaderOpacity'],
+        HeaderLogoHeight: [v => !!String(v.HeaderLogoUrl || '').trim(), `Takes effect once ${optLabel('HeaderLogoUrl')} is set.`, 'HeaderLogoUrl'],
         HideMyMediaTitles: needsOff('HideMyMediaRow'),
         WideTileRadius: needsOn('SeparateWideRadius'),
-        CardBorderColor: [v => Number(v.CardBorderWidth) > 0, `Takes effect with ${optLabel('CardBorderWidth')} above 0.`],
-        CardBorderOpacity: [v => Number(v.CardBorderWidth) > 0, `Takes effect with ${optLabel('CardBorderWidth')} above 0.`],
+        CardBorderColor: [v => Number(v.CardBorderWidth) > 0, `Takes effect with ${optLabel('CardBorderWidth')} above 0.`, 'CardBorderWidth'],
+        CardBorderOpacity: [v => Number(v.CardBorderWidth) > 0, `Takes effect with ${optLabel('CardBorderWidth')} above 0.`, 'CardBorderWidth'],
         GlowSize: needsOn('EnableHoverGlow'),
         CardTitlePosition: needsOff('HideCardTitles'),
         CardTitleLines: needsOff('HideCardTitles'),
@@ -211,7 +204,7 @@
         BadgeTextColor: needsOff('AutoBadgeText'),
         DetailPosterSide: needsOff('HideDetailPoster'),
         NextUpLayout: needsOff('HideNextUp'),
-        LoginBackgroundBlur: [v => !!String(v.LoginBackgroundUrl || '').trim(), `Takes effect once the login ${optLabel('LoginBackgroundUrl')} is set.`],
+        LoginBackgroundBlur: [v => !!String(v.LoginBackgroundUrl || '').trim(), `Takes effect once the login ${optLabel('LoginBackgroundUrl')} is set.`, 'LoginBackgroundUrl'],
         NightStart: needsOn('NightMode'),
         NightEnd: needsOn('NightMode'),
         NightDim: needsOn('NightMode'),
@@ -253,6 +246,38 @@
         AllowUserThemes: 'TV apps always use the server theme.'
     };
     const devicesOf = (id) => DEVICES[id] || ['browser', 'phone', 'tv'];
+
+    // The options shown with "Essentials" (the default view); "All options" shows the rest. An option that differs from
+    // its default always shows, so a setting never disappears from view.
+    const ESSENTIALS = new Set(['AccentColor', 'BackgroundColor', 'SurfaceColor', 'EnableOledBlack', 'CustomFontFamily', 'TextScale',
+        'AppBackgroundUrl', 'BgGradient', 'HeaderColor', 'HeaderOpacity', 'HeaderTransparentTop', 'HeaderLogoUrl', 'TopBarLayout',
+        'PosterSize', 'BorderRadius', 'GridSpacing', 'EnableHoverZoom', 'EnableHoverGlow', 'CardTitlePosition', 'LinkWatchedToAccent',
+        'ProgressTrackerColor', 'BannerDim', 'DetailAlign', 'AccentDetailButtons', 'FilledPlayButton', 'SubtitleStyle', 'SubtitleScale',
+        'LoginBackgroundUrl', 'NightMode', 'AllowUserThemes']);
+
+    // Everyday words for the search box, beyond each option's label and section.
+    const KEYWORDS = {
+        AccentColor: 'primary brand highlight theme main', BackgroundColor: 'bg dark page', SurfaceColor: 'popup menu dialog panel',
+        EnableOledBlack: 'amoled dark pure black', AutoAccentFromBackdrop: 'dynamic artwork automatic', GlassMenus: 'blur transparent see-through acrylic',
+        CustomFontFamily: 'typeface typography', TextScale: 'font bigger smaller zoom', EnableSlimScrollbars: 'scroll bar',
+        AppBackgroundUrl: 'wallpaper picture photo image', AppAccentGlow: 'glow light', BgGradient: 'fade blend',
+        HeaderColor: 'navbar header navigation menu bar toolbar', HeaderOpacity: 'transparent see-through', HeaderTransparentTop: 'see-through scroll',
+        TopBarLayout: 'center middle apple', HeaderLogoUrl: 'brand image', AccentProfileIcon: 'avatar user account',
+        HideHeaderSearch: 'magnifier', HideHeaderCast: 'chromecast', HideHeaderSyncPlay: 'watch together group',
+        HomeTitleScale: 'headings', HideAlphaPicker: 'letters alphabet a-z az jump', HidePlayAll: 'library toolbar', HideShuffle: 'random library toolbar',
+        PosterSize: 'cards bigger smaller thumbnails tiles', BorderRadius: 'rounded round corners curve', WideTileRadius: 'rounded round corners curve',
+        GridSpacing: 'gap margin space between', EnableCardShadow: 'depth', CardBorderWidth: 'outline frame', EnableHoverZoom: 'scale grow mouse',
+        EnableHoverGlow: 'outline ring highlight focus', HideCardTitles: 'names labels', CardTitlePosition: 'names labels overlay',
+        CardButtonColor: 'icons overlay', HideCardOverlayButtons: 'icons overlay', LinkWatchedToAccent: 'tick check seen played',
+        WatchedDim: 'seen played viewed darker', ProgressTrackerColor: 'resume continue watching bar', BadgePosition: 'tick check corner',
+        HideRatings: 'stars imdb rotten tomatoes score', HideAgeRating: 'parental certificate', HideLikeDislike: 'heart favourite',
+        BannerDim: 'backdrop hero darker', BannerBlur: 'backdrop hero', DetailTitleScale: 'name heading', DetailAlign: 'center middle apple',
+        FilledPlayButton: 'resume', HideCastCrew: 'actors people', HideSimilar: 'recommendations', EpisodeThumbScale: 'season',
+        AccentPlayer: 'seek bar volume', SubtitleStyle: 'captions cc', SubtitleScale: 'captions cc', LoginBackgroundUrl: 'sign in wallpaper',
+        LoginWelcomeText: 'sign in message', NightMode: 'dark dim bedtime evening schedule', AllowUserThemes: 'personal per user my theme'
+    };
+    // US spellings find the British ones the labels use.
+    const searchText = (s) => String(s).toLowerCase().replace(/colou?r/g, 'colour').replace(/cent(er|re)/g, 'centre').replace(/gr[ae]y/g, 'grey').replace(/favou?rite/g, 'favourite');
 
     // Saving plugin configuration needs an administrator, so the editor is only offered to admins.
     let isAdmin = false;
@@ -1409,9 +1434,17 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
         const search = document.getElementById('tb_search'), changedOnly = document.getElementById('tb_changed_only');
         if (search.value) search.value = '';
         if (changedOnly.checked) changedOnly.checked = false;
+        const f = fields.find(x => x.id === id);
+        if (!f) return;
+        // Its own group tab; the full list if Essentials hides it, or if it's folded under its parent (it then shows
+        // through a search for it instead, greyed with its hint).
+        activeGroup = fields.filter(x => x.section)[f._sec].group;
         applyFilter();
-        const row = document.querySelector(`#tb-live-panel .tb-field[data-id="${id}"]`);
+        let row = document.querySelector(`#tb-live-panel .tb-field[data-id="${id}"]`);
         if (!row) return;
+        if (row.style.display === 'none') { essentialsOnly = false; applyFilter(); }
+        if (row.style.display === 'none') { search.value = f.label; applyFilter(); }
+        try { localStorage.setItem('tb-group', activeGroup); localStorage.setItem('tb-essentials', essentialsOnly ? '1' : '0'); } catch (e) { /* storage unavailable */ }
         const sec = row.closest('.tb-section');
         if (sec && sec.classList.contains('tb-collapsed')) sec.querySelector('.tb-sec-toggle').click();
         row.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -1542,7 +1575,8 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
         document.getElementById('tb-live-panel').style.setProperty('--tb-accent', v.AccentColor || '#00a4dc');
         document.getElementById('tb-live-panel').style.setProperty('--tb-accent-text', contrastText(v.AccentColor || '#00a4dc'));
         document.querySelectorAll('#tb-live-panel .tb-pv-mode').forEach(b => b.classList.toggle('tb-active', b.getAttribute('data-mode') === previewMode));
-        if (document.getElementById('tb_changed_only').checked) applyFilter();
+        // Every change: folding and the Essentials view depend on the values (and on what's changed).
+        applyFilter();
 
         recordHistory();
     }
@@ -1609,27 +1643,69 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
         try { return JSON.parse(localStorage.getItem('tb-collapsed-names') || '[]'); } catch (e) { return []; }
     }
 
-    // Search text and "Changed only" together decide which options show. A search shows matches even
-    // inside collapsed sections.
+    // The group tab and the "Essentials" view, remembered in this browser.
+    let activeGroup = '';
+    let essentialsOnly = true;
+    try {
+        activeGroup = localStorage.getItem('tb-group') || '';
+        essentialsOnly = localStorage.getItem('tb-essentials') !== '0';
+    } catch (e) { /* storage unavailable: defaults */ }
+
+    // Which options show: search text and "Changed only" (both look across every group), else the group tab and the
+    // Essentials view. Options that hang off a checkbox fold away while it doesn't let them work (search and Changed
+    // only still find them, greyed out). A search shows matches even inside collapsed sections.
     function applyFilter() {
-        const term = document.getElementById('tb_search').value.trim().toLowerCase();
+        const term = searchText(document.getElementById('tb_search').value.trim());
         const changedOnly = document.getElementById('tb_changed_only').checked;
-        let any = false;
+        const browsing = !term && !changedOnly;
+        const v = readValues();
+        let any = false, essentialHidden = 0;
         document.querySelectorAll('#tb-live-panel .tb-section').forEach(s => {
             let visible = 0;
+            const inGroup = !browsing || !activeGroup || s.getAttribute('data-group') === activeGroup;
             s.classList.toggle('tb-searching', !!term);
+            const shownIds = new Set();
             s.querySelectorAll('.tb-field').forEach(fl => {
-                const match = (!term || fl.getAttribute('data-text').indexOf(term) !== -1) && (!changedOnly || fl.classList.contains('tb-changed'));
+                const id = fl.getAttribute('data-id'), changed = fl.classList.contains('tb-changed');
+                const dep = DEPENDS[id], parent = dep && dep[2] ? fields.find(f => f.id === dep[2]) : null;
+                let match = inGroup && (!term || fl.getAttribute('data-text').indexOf(term) !== -1) && (!changedOnly || changed);
+                if (match && browsing && parent) {
+                    // Folded away under an unticked (or ticked, for "Hide …") checkbox; otherwise shown with its parent.
+                    if (parent.type === 'checkbox' && !dep[0](v)) match = false;
+                    else if (essentialsOnly && !shownIds.has(parent.id) && !changed) match = false;
+                } else if (match && browsing && essentialsOnly && !fl.hasAttribute('data-essential') && !changed) {
+                    match = false;
+                    essentialHidden++;
+                }
                 fl.style.display = match ? '' : 'none';
-                if (match) visible++;
+                if (match) { visible++; shownIds.add(id); }
+            });
+            s.querySelectorAll('.tb-hide-list').forEach(h => {
+                h.style.display = [...h.querySelectorAll('.tb-field')].some(fl => fl.style.display !== 'none') ? '' : 'none';
             });
             s.style.display = visible ? '' : 'none';
             if (term && visible) s.classList.remove('tb-collapsed');
             if (visible) any = true;
         });
+        document.querySelectorAll('#tb-live-panel .tb-group').forEach(b => {
+            const active = b.getAttribute('data-group') === activeGroup;
+            b.classList.toggle('tb-active', active);
+            b.setAttribute('aria-selected', String(active));
+        });
+        const ess = document.getElementById('tb_essentials_btn');
+        ess.style.visibility = browsing ? '' : 'hidden';
+        ess.textContent = essentialsOnly ? `Show all options${essentialHidden ? ` (${essentialHidden} more)` : ''}` : 'Show essentials only';
         const none = document.getElementById('tb_no_results');
         none.textContent = changedOnly && !term ? 'Nothing is changed from the defaults.' : 'No options match your search.';
         none.style.display = any ? 'none' : '';
+    }
+
+    function setGroup(group) {
+        activeGroup = group;
+        try { localStorage.setItem('tb-group', group); } catch (e) { /* storage unavailable */ }
+        applyFilter();
+        const scroller = document.getElementById('tb_scroll');
+        if (scroller) scroller.scrollTop = 0;
     }
 
     function showToast(text) {
@@ -1831,37 +1907,31 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                 + (DEVICE_NOTES[f.id] ? ' ' + DEVICE_NOTES[f.id] : '')).replace(/"/g, '&quot;');
             return `<span class="tb-dev" title="${tip}" aria-label="${tip}">${d.map(x => `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${devSvg[x]}</svg>`).join('')}${DEVICE_NOTES[f.id] && !missing.length ? '<span>*</span>' : ''}</span>`;
         };
-        // Each section is its own block (searchable, with its own Reset); each option is a .tb-field.
-        let inputsHtml = '';
-        let sec = -1;
-        fields.forEach(f => {
-            if (f.section) {
-                if (sec >= 0) inputsHtml += '</div>';
-                sec++;
-                f._sec = sec;
-                inputsHtml += `<div class="tb-section" data-sec="${sec}">
-                    <h3 style="display: flex; justify-content: space-between; align-items: baseline; margin: 25px 0 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; font-size: 1.1em; color: #ddd; font-weight: 500;">
-                        <span class="tb-sec-toggle" data-sec="${sec}" title="Collapse / expand" style="cursor: pointer; user-select: none;"><span class="tb-chev" style="display: inline-block; width: 1em; color: #777; transition: transform 0.15s;">&#9662;</span>${f.section}</span>
-                        <button type="button" class="tb-sec-reset" data-sec="${sec}" style="background: none; border: none; color: #888; font-size: 0.75em; cursor: pointer; padding: 0;">Reset section</button>
-                    </h3>`;
-                return;
-            }
-            f._sec = sec;
-            inputsHtml += `<div class="tb-field" data-id="${f.id}" data-text="${(f.label + ' ' + fields.filter(s => s.section)[sec].section).toLowerCase().replace(/"/g, '')}">`;
+        // Each section is its own block (searchable, with its own Reset); each option is a .tb-field. Options that hang
+        // off another one (DEPENDS) are indented under it. The section's plain "Hide …" checkboxes go together in a
+        // compact two-column "Hide on this page" list at its end (a Hide that other options depend on stays in place).
+        const sectionsList = fields.filter(f => f.section);
+        const hasChildren = (id) => Object.keys(DEPENDS).some(k => DEPENDS[k][2] === id);
+        const inHideList = (f) => f.type === 'checkbox' && /^Hide/.test(f.id) && !hasChildren(f.id);
+        const HIDE_NOTES = { 'Detail Page: Sections & Episodes': 'a hidden section takes its heading with it' };
+        const fieldText = (f, s) => searchText([f.label, s.section, s.group, KEYWORDS[f.id] || ''].join(' ')).replace(/"/g, '');
+        const fieldBody = (f) => {
             if (f.type === 'checkbox') {
-                inputsHtml += `<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; color: #ccc;">
+                return `<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; color: #ccc;">
                                 <input type="checkbox" id="tb_${f.id}" style="width: 18px; height: 18px;" />
                                 <span>${f.label}${badge(f)}</span>
                              </label>`;
-            } else if (f.type === 'select') {
-                inputsHtml += `<div style="margin-bottom: 15px;">
+            }
+            if (f.type === 'select') {
+                return `<div style="margin-bottom: 15px;">
                                 <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}${badge(f)}</label>
                                 <select id="tb_${f.id}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #1c1c1c; color: #fff;">
                                     ${f.options.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('')}
                                 </select>
                              </div>`;
-            } else if (f.type === 'color') {
-                inputsHtml += `<div style="margin-bottom: 15px;" id="tb_wrap_${f.id}">
+            }
+            if (f.type === 'color') {
+                return `<div style="margin-bottom: 15px;" id="tb_wrap_${f.id}">
                                 <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}${badge(f)}</label>
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                     <input type="color" id="tb_${f.id}" style="flex: 1; min-width: 0; height: 45px; border: none; border-radius: 6px; cursor: pointer; background: none;" />
@@ -1872,20 +1942,52 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                                     <span id="tb_swatches" style="display: flex; gap: 6px;"></span>
                                 </div>` : ''}
                              </div>`;
-            } else if (f.type === 'range') {
-                inputsHtml += `<div style="margin-bottom: 15px;">
+            }
+            if (f.type === 'range') {
+                return `<div style="margin-bottom: 15px;">
                                 <label style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.95em; color: #aaa;"><span>${f.label}${badge(f)}</span><span id="tb_val_${f.id}" style="color: #fff;"></span></label>
                                 <input type="range" id="tb_${f.id}" min="${f.min}" max="${f.max}" step="${f.step}" style="width: 100%;" />
                              </div>`;
-            } else {
-                inputsHtml += `<div style="margin-bottom: 15px;">
+            }
+            return `<div style="margin-bottom: 15px;">
                                 <label style="display: block; margin-bottom: 5px; font-size: 0.95em; color: #aaa;">${f.label}${badge(f)}</label>
                                 <input type="text" id="tb_${f.id}" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.4); color: #fff; box-sizing: border-box;" />
                              </div>`;
+        };
+        let inputsHtml = '';
+        let sec = -1, rows = '', hides = '';
+        const closeSection = () => {
+            if (sec < 0) return;
+            const s = sectionsList[sec];
+            inputsHtml += rows;
+            if (hides) inputsHtml += `<div class="tb-hide-list"><div class="tb-hide-head">Hide on this page${HIDE_NOTES[s.section] ? ` <span>(${HIDE_NOTES[s.section]})</span>` : ''}</div><div class="tb-hide-grid">${hides}</div></div>`;
+            inputsHtml += '</div>';
+            rows = ''; hides = '';
+        };
+        fields.forEach(f => {
+            if (f.section) {
+                closeSection();
+                sec++;
+                f._sec = sec;
+                inputsHtml += `<div class="tb-section" data-sec="${sec}" data-group="${f.group}">
+                    <h3 style="display: flex; justify-content: space-between; align-items: baseline; margin: 25px 0 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; font-size: 1.1em; color: #ddd; font-weight: 500;">
+                        <span class="tb-sec-toggle" data-sec="${sec}" title="Collapse / expand" style="cursor: pointer; user-select: none;"><span class="tb-chev" style="display: inline-block; width: 1em; color: #777; transition: transform 0.15s;">&#9662;</span>${f.section}</span>
+                        <button type="button" class="tb-sec-reset" data-sec="${sec}" style="background: none; border: none; color: #888; font-size: 0.75em; cursor: pointer; padding: 0;">Reset section</button>
+                    </h3>`;
+                return;
             }
-            inputsHtml += `<div class="tb-hint" id="tb_hint_${f.id}"></div></div>`;
+            f._sec = sec;
+            const attrs = `data-id="${f.id}" data-text="${fieldText(f, sectionsList[sec])}"${ESSENTIALS.has(f.id) ? ' data-essential="1"' : ''}`;
+            const hint = `<div class="tb-hint" id="tb_hint_${f.id}"></div>`;
+            if (inHideList(f)) {
+                const short = f.label.replace(/^Hide /, '');
+                hides += `<div class="tb-field tb-hide-item" ${attrs}><label><input type="checkbox" id="tb_${f.id}" /><span>${short.charAt(0).toUpperCase() + short.slice(1)}${badge(f)}</span></label>${hint}</div>`;
+                return;
+            }
+            const child = DEPENDS[f.id] && DEPENDS[f.id][2] ? ' tb-child' : '';
+            rows += `<div class="tb-field${child}" ${attrs}>${fieldBody(f)}${hint}</div>`;
         });
-        if (sec >= 0) inputsHtml += '</div>';
+        closeSection();
         inputsHtml += '<div id="tb_no_results" style="display: none; color: #888; margin-top: 30px;">No options match your search.</div>';
 
         // Toolbar icons (inline SVG: the web client's icon font doesn't have every glyph).
@@ -1939,6 +2041,11 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                         </div>
                     </div>
                 </div>
+                <div id="tb_groups" class="tb-groups" role="tablist" aria-label="Option groups">
+                    <button type="button" class="tb-group" role="tab" data-group="">All</button>
+                    ${[...new Set(fields.filter(f => f.section).map(f => f.group))].map(g => `<button type="button" class="tb-group" role="tab" data-group="${g}">${g}</button>`).join('')}
+                </div>
+                <button id="tb_essentials_btn" type="button" class="tb-essentials"></button>
             </div>`;
 
         // Theme code dialog, shared by Export (filled + selected) and Import (empty, paste then Apply).
@@ -2131,7 +2238,8 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                 #tb_scroll.tb-slim-scroll::-webkit-scrollbar-track { background: transparent; }
                 #tb_scroll.tb-slim-scroll::-webkit-scrollbar-thumb { background: var(--tb-accent); border-radius: 8px; }
                 /* Toolbar: two tidy rows of equal-height controls; rarely used actions live in the More menu. */
-                #tb_tools { position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 8px; padding: 14px 0 12px 0; background: rgb(17,17,17); border-bottom: 1px solid rgba(255,255,255,0.06); }
+                #tb_tools { position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 8px; padding: 14px 0 12px 0; background: rgb(17,17,17); border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: -20px 0 0 rgb(17,17,17); }
+                /* (The shadow covers the "changed" dots, which sit just left of each option, as they scroll under the bar.) */
                 #tb-live-panel .tb-tools-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
                 #tb-live-panel .tb-ctl { height: 34px; box-sizing: border-box; min-width: 0; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: #1c1c1c; color: #fff; font-size: 0.9em; }
                 #tb-live-panel .tb-tool-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: #262626; color: #ddd; cursor: pointer; font-size: 0.9em; white-space: nowrap; }
@@ -2171,6 +2279,21 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
                 /* Options that differ from their default get an accent dot. */
                 #tb-live-panel .tb-field { position: relative; }
                 #tb-live-panel .tb-field.tb-changed::before { content: ''; position: absolute; left: -14px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--tb-accent, #00a4dc); }
+                #tb-live-panel .tb-groups { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+                #tb-live-panel .tb-group { flex: 0 0 auto; padding: 6px 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #bbb; cursor: pointer; font-size: 0.88em; }
+                #tb-live-panel .tb-group:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+                #tb-live-panel .tb-group.tb-active { background: var(--tb-accent, #00a4dc); border-color: transparent; color: var(--tb-accent-text, #fff); }
+                #tb-live-panel .tb-group:focus-visible, #tb-live-panel .tb-essentials:focus-visible { outline: 2px solid var(--tb-accent, #00a4dc); outline-offset: 2px; }
+                #tb-live-panel .tb-essentials { display: block; margin: 8px 0 0 auto; background: none; border: none; padding: 2px 0; color: var(--tb-accent, #00a4dc); cursor: pointer; font-size: 0.85em; }
+                #tb-live-panel .tb-field.tb-child { margin-left: 14px; padding-left: 12px; border-left: 2px solid rgba(255,255,255,0.08); }
+                #tb-live-panel .tb-hide-list { margin: 4px 0 18px 0; padding: 10px 12px 4px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+                #tb-live-panel .tb-hide-head { font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 8px; }
+                #tb-live-panel .tb-hide-head span { text-transform: none; letter-spacing: 0; }
+                #tb-live-panel .tb-hide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 14px; }
+                #tb-live-panel .tb-hide-item label { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; cursor: pointer; color: #ccc; font-size: 0.92em; line-height: 1.3; }
+                #tb-live-panel .tb-hide-item input { width: 16px; height: 16px; flex-shrink: 0; margin: 1px 0 0 0; }
+                #tb-live-panel .tb-hide-item .tb-hint { margin: -4px 0 8px 24px; }
+                #tb-live-panel .tb-section.tb-collapsed .tb-hide-list { display: none !important; }
                 #tb-live-panel .tb-dev { display: inline-flex; gap: 3px; align-items: center; margin-left: 8px; padding: 2px 6px; border-radius: 999px; background: rgba(255,255,255,0.07); color: #9aa3ad; vertical-align: middle; cursor: help; font-size: 0.8em; line-height: 1; }
                 #tb-live-panel .tb-hint { display: none; margin: -9px 0 14px 0; font-size: 0.82em; color: #8a8a8a; line-height: 1.35; }
                 #tb-live-panel .tb-field.tb-inactive > :not(.tb-hint) { opacity: 0.4; transition: opacity 0.15s; }
@@ -2310,6 +2433,12 @@ ${ec} .editorsChoiceItemRating { display: block !important; }
             showToast('Loaded the settings from before the last save. Click Save & Reload to keep them.');
         });
 
+        document.querySelectorAll('#tb-live-panel .tb-group').forEach(b => b.addEventListener('click', function () { setGroup(this.getAttribute('data-group')); }));
+        document.getElementById('tb_essentials_btn').addEventListener('click', function () {
+            essentialsOnly = !essentialsOnly;
+            try { localStorage.setItem('tb-essentials', essentialsOnly ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+            applyFilter();
+        });
         document.getElementById('tb_pick_btn').addEventListener('click', startPicking);
         document.getElementById('tb_pick_again').addEventListener('click', function () { document.getElementById('tb_pick').style.display = 'none'; startPicking(); });
         document.getElementById('tb_pick_close').addEventListener('click', function () { document.getElementById('tb_pick').style.display = 'none'; });

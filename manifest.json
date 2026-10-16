@@ -9,12 +9,12 @@
         "imageUrl":  "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.jpg",
         "versions":  [
                          {
-                             "version":  "1.2.12.0",
-                             "changelog":  "Registers with File Transformation 3.x reliably: when Jellyfin has it loaded more than once at startup, Theme Builder registers with every copy that accepts instead of retrying the first one found, so the Theme Editor and script features load again.",
+                             "version":  "1.2.13.0",
+                             "changelog":  "Theme Editor reorganised: tabs, an Essentials view, dependent options indented and folded, one Hide list per page, search with everyday words. Click the page to find the options that style it. Device badges and greyed-out options that say why. TV preview shows real remote-focus states. TV focus colours chosen by contrast; clicked buttons no longer stay accent. Injection status on the plugin page, self-repair every few minutes and an Activity warning. Hidden SyncPlay icon returns while in a group.",
                              "targetAbi":  "12.1.0.0",
-                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.12/ThemeBuilder_1.2.12.0.zip",
-                             "checksum":  "09ccba272a021910d75b8dfe145cef66",
-                             "timestamp":  "2026-10-16T11:17:39Z"
+                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.13/ThemeBuilder_1.2.13.0.zip",
+                             "checksum":  "718c8b35e4cc3fd3395e1074052ae2c2",
+                             "timestamp":  "2026-10-16T12:07:05Z"
                          }
                      ]
     }
