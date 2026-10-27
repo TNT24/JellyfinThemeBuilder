@@ -9,12 +9,12 @@
         "imageUrl":  "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.jpg",
         "versions":  [
                          {
-                             "version":  "1.2.14.0",
-                             "changelog":  "The plugin page and Diagnostics show the attempt that actually added the script (they said attempt 60 when the first one worked), and no longer show an error from leftover File Transformation copies once one has accepted.",
+                             "version":  "1.2.15.0",
+                             "changelog":  "Next Up (Large layout): the title no longer sits against the image on Jellyfin 12, the card is a bit smaller, and a new Next Up Size (%) option scales it from 60 to 160%.",
                              "targetAbi":  "12.1.0.0",
-                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.14/ThemeBuilder_1.2.14.0.zip",
-                             "checksum":  "533c75a135dfd6e3fc49f366d1e41eb9",
-                             "timestamp":  "2026-10-16T12:15:02Z"
+                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.15/ThemeBuilder_1.2.15.0.zip",
+                             "checksum":  "b2d65fddee94fae8cad5296e2bbd01d2",
+                             "timestamp":  "2026-10-27T11:51:11Z"
                          }
                      ]
     }
