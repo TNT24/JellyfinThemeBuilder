@@ -614,6 +614,9 @@
         const kept = [...s.cssRules].filter(r => !(r.selectorText && /:has\(|:is\(/.test(r.selectorText))).map(r => r.cssText).join('\n');
         check('featured Next Up rules kept (old TVs too)', kept.indexOf('.nextUpItems > .card > .cardBox') !== -1 && kept.indexOf('.nextUpItems .cardScalable') !== -1);
         check('featured Next Up avoids flex gap (older TVs)', !/nextUpItems[^}]*gap:/.test(nuCss));
+        check('featured Next Up covers cards without a .cardFooter', nuCss.indexOf('.nextUpItems .cardBox > .cardText') !== -1);
+        const sized = T.buildCss(Object.assign(T.defaultValues(), { NextUpLayout: 'featured', NextUpScale: '60' }));
+        check('Next Up Size scales the featured card', /nextUpItems > \.card \{[^}]*max-width: 27\.6em/.test(sized) && /nextUpItems > \.card \{[^}]*max-width: 46em/.test(nuCss));
     })();
 
     // MUI reads the main colour from variables: "r g b" channels and valid hex shades.

@@ -141,6 +141,7 @@
         { section: 'Detail Page: Sections & Episodes', group: 'Details' },
         { id: 'HideNextUp', label: 'Hide Next Up', type: 'checkbox', default: false },
         { id: 'NextUpLayout', label: 'Next Up Layout (series pages)', type: 'select', default: 'featured', options: [['featured', 'Large, details beside the image (Apple TV+)'], ['default', 'Small card (Jellyfin default)']] },
+        { id: 'NextUpScale', label: 'Next Up Size (%)', type: 'range', min: '60', max: '160', step: '10', default: '100' },
         { id: 'HideCastCrew', label: 'Hide Cast & Crew (incl. Guest Stars)', type: 'checkbox', default: false },
         { id: 'HideMoreFrom', label: 'Hide "More From Season / Artist"', type: 'checkbox', default: false },
         { id: 'HideSpecials', label: 'Hide Special Features', type: 'checkbox', default: false },
@@ -204,6 +205,7 @@
         BadgeTextColor: needsOff('AutoBadgeText'),
         DetailPosterSide: needsOff('HideDetailPoster'),
         NextUpLayout: needsOff('HideNextUp'),
+        NextUpScale: [v => v.NextUpLayout === 'featured', `Only for the Large ${optLabel('NextUpLayout')}.`, 'NextUpLayout'],
         LoginBackgroundBlur: [v => !!String(v.LoginBackgroundUrl || '').trim(), `Takes effect once the login ${optLabel('LoginBackgroundUrl')} is set.`, 'LoginBackgroundUrl'],
         NightStart: needsOn('NightMode'),
         NightEnd: needsOn('NightMode'),
@@ -272,7 +274,7 @@
         WatchedDim: 'seen played viewed darker', ProgressTrackerColor: 'resume continue watching bar', BadgePosition: 'tick check corner',
         HideRatings: 'stars imdb rotten tomatoes score', HideAgeRating: 'parental certificate', HideLikeDislike: 'heart favourite',
         BannerDim: 'backdrop hero darker', BannerBlur: 'backdrop hero', DetailTitleScale: 'name heading', DetailAlign: 'center middle apple',
-        FilledPlayButton: 'resume', HideCastCrew: 'actors people', HideSimilar: 'recommendations', EpisodeThumbScale: 'season',
+        FilledPlayButton: 'resume', HideCastCrew: 'actors people', HideSimilar: 'recommendations', EpisodeThumbScale: 'season', NextUpScale: 'bigger smaller episode',
         AccentPlayer: 'seek bar volume', SubtitleStyle: 'captions cc', SubtitleScale: 'captions cc', LoginBackgroundUrl: 'sign in wallpaper',
         LoginWelcomeText: 'sign in message', NightMode: 'dark dim bedtime evening schedule', AllowUserThemes: 'personal per user my theme'
     };
@@ -476,18 +478,25 @@ ${textAreas} { padding-left: 3.3% !important; padding-right: 32.45vw !important;
 
         // Next Up on series pages: usually one episode as a small card in a wide empty row. Featured makes it a
         // large image with the episode details beside it (stacked on narrow screens). No flex gap: older TVs lack it.
+        // Some web versions put the card text straight in the card box instead of a .cardFooter, so the text
+        // column rules cover both.
         if (v.NextUpLayout === 'featured') {
             const nu = '.itemDetailPage .nextUpItems';
-            css += `${nu} > .card { width: 100% !important; max-width: 56em; }
+            const textCol = `${nu} .cardFooter, ${nu} .cardBox > .cardText`;
+            // Size scales the whole card (the image keeps its share of it); the text stays its normal size.
+            const nuWidth = Number((46 * Number(v.NextUpScale) / 100).toFixed(2));
+            css += `${nu} > .card { width: 100% !important; max-width: ${nuWidth}em; }
 ${nu} > .card > .cardBox { display: flex; align-items: center; }
-${nu} .cardScalable { flex: 0 0 55%; max-width: 55%; }
-${nu} .cardFooter { position: static !important; flex: 1 1 auto; min-width: 0; margin-left: 2em; padding: 0.8em 2em 0.8em 0 !important; background: none !important; opacity: 1 !important; }
-${nu} .cardText { text-align: left !important; white-space: normal !important; font-size: 1.1em; line-height: 1.4; opacity: 0.8; padding: 0.1em 0 !important; }
+${nu} .cardScalable { flex: 0 0 45%; max-width: 45%; }
+${textCol} { position: static !important; flex: 1 1 auto; min-width: 0; margin-left: 1.5em; padding: 0.8em 1.5em 0.8em 0 !important; background: none !important; opacity: 1 !important; }
+${nu} .cardText { text-align: left !important; white-space: normal !important; font-size: 1.1em; line-height: 1.4; opacity: 0.8; }
+${nu} .cardFooter .cardText { padding: 0.1em 0 !important; }
 ${nu} .cardText-first { font-size: 1.45em; font-weight: 600; opacity: 1; line-height: 1.25; margin-bottom: 0.5em; }
+${nu} .cardBox > .cardText-first { margin-bottom: 0; }
 @media (max-width: 40em) {
     ${nu} > .card > .cardBox { display: block; }
     ${nu} .cardScalable { max-width: none; }
-    ${nu} .cardFooter { margin: 0.8em 0 0 0; padding: 0 0.4em !important; }
+    ${textCol} { margin: 0.8em 0 0 0; padding: 0 0.4em !important; }
 }\n`;
         }
 
