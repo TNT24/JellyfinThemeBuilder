@@ -9,12 +9,12 @@
         "imageUrl":  "https://raw.githubusercontent.com/TNT24/JellyfinThemeBuilder/main/assets/thumb.jpg",
         "versions":  [
                          {
-                             "version":  "1.2.15.0",
-                             "changelog":  "Next Up (Large layout): the title no longer sits against the image on Jellyfin 12, the card is a bit smaller, and a new Next Up Size (%) option scales it from 60 to 160%.",
+                             "version":  "1.2.16.0",
+                             "changelog":  "TV: the Solid Accent Play button now only fills with the accent when it\u0027s selected, like every other button. Before, it looked selected while another button was, and turned grey when it actually was selected.",
                              "targetAbi":  "12.1.0.0",
-                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.15/ThemeBuilder_1.2.15.0.zip",
-                             "checksum":  "b2d65fddee94fae8cad5296e2bbd01d2",
-                             "timestamp":  "2026-10-27T11:51:11Z"
+                             "sourceUrl":  "https://github.com/TNT24/JellyfinThemeBuilder/releases/download/v1.2.16/ThemeBuilder_1.2.16.0.zip",
+                             "checksum":  "938a3062a7ed4f5859848959d8080025",
+                             "timestamp":  "2026-11-09T13:34:50Z"
                          }
                      ]
     }
