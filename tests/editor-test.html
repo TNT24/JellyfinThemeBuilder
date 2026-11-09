@@ -394,8 +394,12 @@
         check('detail Play button is a circle, not an oval', Math.round(play.width) === Math.round(play.height), play.width + 'x' + play.height);
         check('every detail button is the same size and shape', Math.round(played.width) === Math.round(play.width) && getComputedStyle(host.querySelectorAll('.detailButton')[1]).borderRadius === '50%', played.width + ' vs ' + play.width);
         const tv = host.querySelector('#tvPlay'); tv.focus();
-        // Purple on light grey is only 2.86:1, so this accent inverts onto near-black instead.
-        check('TV: focused solid Play button inverts so focus shows', getComputedStyle(tv).backgroundColor === 'rgb(20, 20, 20)' && getComputedStyle(tv.querySelector('.material-icons')).color === 'rgb(169, 112, 255)', getComputedStyle(tv).backgroundColor);
+        // On TV an accent fill marks focus, so the solid Play is only solid while focused; unfocused it's an outline.
+        const tvCs = getComputedStyle(tv);
+        check('TV: focused solid Play fills with the accent', tvCs.backgroundColor === 'rgb(169, 112, 255)' && tvCs.boxShadow === 'none', tvCs.backgroundColor + ' | ' + tvCs.boxShadow);
+        tv.blur();
+        const idleCs = getComputedStyle(tv);
+        check('TV: unfocused solid Play is an outline, not the focus fill', idleCs.backgroundColor !== 'rgb(169, 112, 255)' && idleCs.boxShadow !== 'none', idleCs.backgroundColor + ' | ' + idleCs.boxShadow);
         st.remove(); host.remove();
     })();
 
@@ -475,14 +479,14 @@
                 document.body.appendChild(host);
                 host.querySelectorAll('*').forEach(e => { e.style.transition = 'none'; });
                 const el = host.querySelector(sel), textEl = textSel ? el.querySelector(textSel) : el;
-                const before = hex(behind(el));
+                const before = hex(behind(el)) + ' ' + getComputedStyle(el).boxShadow;
                 el.focus();
                 if (document.activeElement !== el) unfocusable.push(name);
                 const fg = over(rgb(getComputedStyle(textEl).color), behind(textEl)), bg = behind(textEl);
                 const r = ratio(fg, bg);
                 const label = `${t.AccentColor}${t.BackgroundColor ? ' on ' + t.BackgroundColor : ''}: ${name}`;
                 if (r < 3) problems.push(`${label} text ${hex(fg)} on ${hex(bg)} (${r.toFixed(2)}:1)`);
-                if (alreadyAccent && hex(behind(el)) === before) problems.push(`${label} looks the same focused (${before})`);
+                if (alreadyAccent && hex(behind(el)) + ' ' + getComputedStyle(el).boxShadow === before) problems.push(`${label} looks the same focused (${before})`);
                 el.blur(); host.remove();
             });
             st.remove();
@@ -866,7 +870,8 @@
     const profs = strip.querySelectorAll('.headerUserButton');
     check('TV preview: focused profile icon differs from unfocused', getComputedStyle(profs[0]).backgroundColor === 'rgb(229, 9, 20)' && getComputedStyle(profs[1]).backgroundColor !== getComputedStyle(profs[1]).color && getComputedStyle(profs[1]).backgroundColor !== 'rgb(229, 9, 20)', getComputedStyle(profs[1]).backgroundColor);
     const plays = strip.querySelectorAll('.btnPlay');
-    check('TV preview: focused solid Play differs from unfocused', getComputedStyle(plays[0]).backgroundColor === 'rgb(229, 9, 20)' && getComputedStyle(plays[1]).backgroundColor !== 'rgb(229, 9, 20)', getComputedStyle(plays[1]).backgroundColor);
+    check('TV preview: solid Play is an outline unfocused and fills when focused', getComputedStyle(plays[0]).backgroundColor !== 'rgb(229, 9, 20)' && getComputedStyle(plays[0]).boxShadow !== 'none'
+        && getComputedStyle(plays[1]).backgroundColor === 'rgb(229, 9, 20)', getComputedStyle(plays[0]).backgroundColor + ' -> ' + getComputedStyle(plays[1]).backgroundColor);
     check('TV preview would show an accent-on-accent focus bug', /#tb_pv_tvfocus \.emby-button\.show-focus\.tb-pf/.test(T.tvFocusCss('html .emby-button.show-focus:focus { background-color: #e50914 !important; }'))
         && T.tvFocusCss('@media (hover: hover) { .emby-button:hover { color: red; } } html:not(.layout-tv) .raised:focus { color: red; }') === '');
     document.querySelector('.tb-pv-mode[data-mode="desktop"]').click();

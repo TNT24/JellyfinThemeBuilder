@@ -824,9 +824,12 @@ html .emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color
 .itemDetailPage .mainDetailButtons ${plain}.show-focus:focus .material-icons:not(.playstatebutton-icon-played):not(.ratingbutton-icon-withrating) { color: ${accentText} !important; }\n`;
         if (v.FilledPlayButton) css += `.itemDetailPage .mainDetailButtons .btnPlay, .itemDetailPage .mainDetailButtons .btnReplay { background-color: ${accent} !important; border-radius: 50% !important; }
 .itemDetailPage .mainDetailButtons .btnPlay .material-icons, .itemDetailPage .mainDetailButtons .btnReplay .material-icons { color: ${accentText} !important; }
-/* TV focus: the button is already solid accent, so focus inverts it, or the focused Play looked unfocused. */
-.itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus { background-color: ${invertBg} !important; }
-.itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus .material-icons, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus .material-icons { color: ${accent} !important; }\n`;
+/* TV (show-focus): a solid accent fill is how the TV marks the focused button, so an always-solid Play looked focused
+   while another button was. Unfocused it's an accent outline on a light tint; focused it fills like every other button. */
+.itemDetailPage .mainDetailButtons .btnPlay.show-focus:not(:focus), .itemDetailPage .mainDetailButtons .btnReplay.show-focus:not(:focus) { background-color: ${rgba(accent, 0.15)} !important; box-shadow: inset 0 0 0 0.12em ${focusText} !important; }
+.itemDetailPage .mainDetailButtons .btnPlay.show-focus:not(:focus) .material-icons, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:not(:focus) .material-icons { color: ${focusText} !important; }
+.itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus { background-color: ${accent} !important; box-shadow: none !important; }
+.itemDetailPage .mainDetailButtons .btnPlay.show-focus:focus .material-icons, .itemDetailPage .mainDetailButtons .btnReplay.show-focus:focus .material-icons { color: ${accentText} !important; }\n`;
         hide(v.HideTrailerBtn, '.itemDetailPage .btnPlayTrailer');
         hide(v.HideDownloadBtn, '.itemDetailPage .btnDownload');
         hide(v.HideInstantMixBtn, '.itemDetailPage .btnInstantMix');
